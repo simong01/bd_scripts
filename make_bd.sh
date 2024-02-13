@@ -39,10 +39,10 @@ IF573_VERSION=laird-backport-11.0.0.138
 # LWB5+ (Summit) lwb5p NOT in laird-backport-11.171.0.19 ??
 #
 LAIRD_WIFI=0
-LAIRD_WIFI_DEFCONFIG=brcmfmac
+LAIRD_WIFI_DEFCONFIG=bdsdmac
 LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/laird-backport-11.171.0.19
-#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
-LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
+LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
+#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
 
 ##########################################################################################################################################################################################
 
@@ -51,9 +51,14 @@ LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.
 
 # Install the old cypress fw
 # LWB5+
-CYPRESS_FW=1
+CYPRESS_FW=0
 CYPRESS_FW_BASE_PWD=/home/simong/githome/cypress-firmware
 
+# Intel Wifi
+IWL_WIFI=0
+IWL_WIFI_FW=0
+IWL_WIFI_FW_VER=iwlwifi-ty-59.601f3a66.0
+IWL_WIFI_FW_BASE_PWD=/home/simong/Downloads/
 
 check_result() {
 	local NAME=$1
@@ -140,7 +145,7 @@ make modules_install
 case $variant in
 
 	8m)
-		DTBS="freescale/imx8m*nitrogen*.dtb"
+		DTBS="freescale/imx8m*nitrogen*.dtb freescale/imx8mm-geno.dtb"
 		SUBDIR="nitrogen8m"
 	;;
 
@@ -175,6 +180,8 @@ if [ $variant = 8m ]; then
 		check_result imx-gpu-viv $?
 
 		make modules_install
+
+		cd $KERNEL_SRC
 	fi
 
 	if [ $IMX_VVCAM -eq 1 ]; then
@@ -184,6 +191,24 @@ if [ $variant = 8m ]; then
 		check_result imx-vvcam $?
 
 		make modules_install
+
+		cd $KERNEL_SRC
+	fi
+
+	if [ $IWL_WIFI -eq 1 ]; then
+		cd ../backport-iwlwifi
+
+		make defconfig-iwlwifi-public
+		make -j16
+
+		check_result iwlwifi $?
+
+		make modules_install
+
+		if [ $IWL_WIFI_FW -eq 1 ]; then
+			sudo cp ${IWL_WIFI_FW_BASE_PWD}/${IWL_WIFI_FW_VER}/iwlwifi-ty-*.ucode ${NFSROOT}/${SUBDIR}/lib/firmware/
+		fi
+		cd $KERNEL_SRC
 	fi
 fi
 
