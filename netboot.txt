@@ -11,6 +11,10 @@
 #
 # dhcp ${loadaddr} netboot.scr; source ${loadaddr} 
 #
+# OR ...
+#
+# dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
+#
 
 # Point to your server
 
@@ -88,6 +92,11 @@ elif itest.s "xnitrogen_smarc" == "x${board}" ; then
 	else
 		echo "!!!! Error: Unknown nitrogen_smarc board. ${board} ${imx_cpu}"
 	fi
+elif itest.s "xgeno" == "x${board}" ; then
+	detected_board=imx8mm_geno
+	setenv tftp_varient 'nitrogen8m'
+        setenv nfs_varient 'nitrogen8m'
+        setenv fdt_file imx8mm-geno.dtb;
 
 elif itest.s "xnitrogen8mm_som" == "x${board}" ; then
 		detected_board=imx8mm_som
@@ -113,7 +122,7 @@ setenv nfsroot ${nfs_base}/${nfs_varient};
 
 if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_board}"; then
 	echo
-	echo "Tungsten ${tftp_varient}"
+	echo "Tungsten ${detected_board}"
 	echo
 
 	setenv console "ttyS0"
@@ -156,6 +165,14 @@ elif itest.s "ximx8mm_som" == "x${detected_board}"; then
 
 	echo
 	echo "Nitrogen 8MM SOM"
+	echo
+
+	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; run cmd_mipi; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
+
+elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
+
+	echo
+	echo "Nitrogen 8MM GENO"
 	echo
 
 	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; run cmd_mipi; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
