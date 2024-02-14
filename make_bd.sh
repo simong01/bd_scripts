@@ -1,10 +1,8 @@
 #!/bin/sh
 
-
 variant=unknown
 
 variants="93 510 700 8m"
-
 
 NPROC=$(($(nproc) - 4))
 
@@ -12,7 +10,7 @@ NFSROOT="/srv/nfs"
 TFTPROOT="/srv/tftp"
 
 ##################################################################
-# Currently only for 8m targets
+# Currently only for 8m variants
 
 # imx-gpu-viv
 IMX_GPU_VIV=1
@@ -27,7 +25,8 @@ IF573_BASE_PWD=/home/simong/Downloads/8MM_SMARC/if573/release
 # IF573 laird-backport-11.0.0.138
 IF573_VERSION=laird-backport-11.0.0.138
 #
-
+##################################################################
+#
 # Laird drivers https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/backports/images/
 # 		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/backports/images/backports-laird-11.171.0.19.tar.bz2
 #
@@ -43,7 +42,7 @@ LAIRD_WIFI_DEFCONFIG=bdsdmac
 LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/laird-backport-11.171.0.19
 LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
 #LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
-
+#
 ##########################################################################################################################################################################################
 
 # QCACLD_BASE_PWD=/home/simong/githome/qcacld-2.0/backport
@@ -59,6 +58,8 @@ IWL_WIFI=0
 IWL_WIFI_FW=0
 IWL_WIFI_FW_VER=iwlwifi-ty-59.601f3a66.0
 IWL_WIFI_FW_BASE_PWD=/home/simong/Downloads/
+
+##########################################################################################################################################################################################
 
 check_result() {
 	local NAME=$1
@@ -169,9 +170,27 @@ case $variant in
 		exit 64
 	;;
 esac
+#########################################################################
+#
+# Common stuff
+if [ $IWL_WIFI -eq 1 ]; then
+	cd ../backport-iwlwifi
+
+	make defconfig-iwlwifi-public
+	make -j16
+
+	check_result iwlwifi $?
+
+	make modules_install
+
+	if [ $IWL_WIFI_FW -eq 1 ]; then
+		sudo cp ${IWL_WIFI_FW_BASE_PWD}/${IWL_WIFI_FW_VER}/iwlwifi-ty-*.ucode ${NFSROOT}/${SUBDIR}/lib/firmware/
+	fi
+	cd $KERNEL_SRC
+fi
+#########################################################################
 
 # Common iMX stuff
-# TODO
 if [ $variant = 8m ]; then
 	if [ $IMX_GPU_VIV -eq 1 ]; then
 		cd ../kernel-module-imx-gpu-viv
@@ -195,21 +214,6 @@ if [ $variant = 8m ]; then
 		cd $KERNEL_SRC
 	fi
 
-	if [ $IWL_WIFI -eq 1 ]; then
-		cd ../backport-iwlwifi
-
-		make defconfig-iwlwifi-public
-		make -j16
-
-		check_result iwlwifi $?
-
-		make modules_install
-
-		if [ $IWL_WIFI_FW -eq 1 ]; then
-			sudo cp ${IWL_WIFI_FW_BASE_PWD}/${IWL_WIFI_FW_VER}/iwlwifi-ty-*.ucode ${NFSROOT}/${SUBDIR}/lib/firmware/
-		fi
-		cd $KERNEL_SRC
-	fi
 fi
 
 if [ $variant = 93 ]||[ $variant = 8m ]; then
@@ -312,8 +316,6 @@ if [ $variant = 510 ]||[ $variant = 700 ]; then
 	sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
 fi
 # 
-
-
 
 sudo cp -av out/lib/modules/${kernel_release} ${NFSROOT}/${SUBDIR}/lib/modules/
 
