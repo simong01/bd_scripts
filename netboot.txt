@@ -15,6 +15,14 @@
 #
 # dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
 #
+# setenv net_boot 'dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}'
+#
+# run net_boot
+#
+# To debug...
+#
+# setenv xtrace yes
+#
 
 # Point to your server
 
@@ -30,6 +38,15 @@ setenv nfs_base /srv/nfs
 # nfs_varient adds a subdirectory to the $nfs_base variable
 #
 ############################################################################
+
+setenv banner '
+	echo
+	echo "*******************************************************************"
+	echo "*                                                                 *"
+	echo "*        $bannertext						"
+	echo "*                                                                 *"
+	echo "*******************************************************************"
+'
 
 detected_board=unknown
 
@@ -49,7 +66,7 @@ setexpr cpu3 sub "^(..?.?).*" "\\1" "${imx_cpu}"
 
 ###################################
 # Detect board. And set fdt_file.
-# Add new boards here.
+# Add new boards here. (detected_board)
 
 if itest.s "x" == "x${board}" ; then
         echo "!!!! Error: Your u-boot is not a known boundary u-boot. Please upgrade u-boot.";
@@ -109,21 +126,25 @@ else
 fi
 
 
-##########################################
-# After here the board should be detected
-#
-##########################################
+#################################################################################################################
+#														#
+# ######################################## After here the board should be detected ##############################
+#														#
+#################################################################################################################
 
 # Common variables
 setenv nfsroot ${nfs_base}/${nfs_varient};
 #
 
-# Tungsten T510 OR T700 
+#########################################################################################
+#
+# ***************** Tungsten T510 OR T700 ***********************************************
+#
+#########################################################################################
 
 if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_board}"; then
-	echo
-	echo "Tungsten ${detected_board}"
-	echo
+	setenv bannertext "Tungsten ${detected_board}"
+	run banner
 
 	setenv console "ttyS0"
 	setenv bootargs_base 'setenv bootargs console=$console,115200 vmalloc=400M consoleblank=0 --no-log loglevel=7 snd.slots=,snd-soc-imx-hdmi board=${board} cpu=${cpu} no_console_suspend'
@@ -135,63 +156,86 @@ if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_bo
 	setenv boot_tftp 'tftp $loadaddr $tftpserverip:${tftp_varient}/Image && booti $loadaddr - $a_fdt'
 	setenv bootcmd_net 'run load_fdt_dhcp load_dtbos bootargs_base bootargs_nfs boot_tftp'
 
-
-# 8M SMARC
-
-elif itest.s "ximx8mp_smarc" == "x${detected_board}" || itest.s "ximx8mm_smarc" == "x${detected_board}"; then
-
-	if itest.s "ximx8mm_smarc" == "x${detected_board}"; then
-		echo
-		echo "Nitrogen 8MM SMARC"
-		echo
-
-		setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
-
-	fi
-
-	if itest.s "ximx8mp_smarc" == "x${detected_board}"; then
-
-		echo
-		echo "Nitrogen 8MP SMARC"
-		echo
-
-		setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; run cmd_mipi cmd_lvds cmd_hdmi; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
-
-	fi
-
-# 8MM SOM
-
-elif itest.s "ximx8mm_som" == "x${detected_board}"; then
-
-	echo
-	echo "Nitrogen 8MM SOM"
-	echo
-
-	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; run cmd_mipi; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
+#########################################################################################
+#
+# ***************** 8MM GENO*************************************************************
+#
+#########################################################################################
 
 elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
+	setenv bannertext "Nitrogen 8MM GENO"
+	run banner
 
-	echo
-	echo "Nitrogen 8MM GENO"
-	echo
+	setenv post_fdt 'run cmd_mipi'
 
-	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; run cmd_mipi; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
+#########################################################################################
+#
+# ***************** 8MM SMARC ************************************************************
+#
+#########################################################################################
 
+elif itest.s "ximx8mm_smarc" == "x${detected_board}"; then
 
-# 93 SMARC
+	setenv bannertext "Nitrogen 8MM SMARC"
+	run banner
+
+#########################################################################################
+#
+# ***************** 8MM SOM *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mm_som" == "x${detected_board}"; then
+	setenv bannertext "Nitrogen 8MM SOM"
+	run banner
+
+	setenv post_fdt 'run cmd_mipi'
+
+#########################################################################################
+#
+# ***************** 8MP SMARC ************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
+	setenv bannertext "Nitrogen 8MP SMARC"
+	run banner
+
+	setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
+
+#########################################################################################
+#
+# ***************** 93 SMARC ************************************************************
+#
+#########################################################################################
 
 elif itest.s "ximx93_smarc" == "x${detected_board}"; then
-	echo
-	echo "Nitrogen 93 SMARC"
-	echo
+	setenv bannertext "Nitrogen 93 SMARC"
+	run banner
+fi
 
-	setenv bootcmd_net 'run netargs;  if test ${ip_dyn} = yes; then setenv get_cmd dhcp; else setenv get_cmd tftp; fi; ${get_cmd} ${loadaddr} ${tftpserverip}:${tftp_variant}/Image; if test ${boot_fdt} = yes || test ${boot_fdt} = try; then if ${get_cmd} ${fdt_addr} ${tftpserverip}:${tftp_variant}/${fdt_file}; fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize; then booti ${loadaddr} - ${fdt_addr}; else echo WARN: Cannot load the DT; fi; else booti; fi;'
+# Common for all IMX boards
+if test -n "${imx_cpu}"; then
 
+	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image;
+		if test ${boot_fdt} = yes || test ${boot_fdt} = try;
+		then
+			if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file};
+			fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize;
+			then
+				if test -n "${post_fdt}";
+				then
+					${post_fdt};
+				fi
+				booti ${loadaddr} - ${fdt_addr};
+			else
+				echo WARN: Cannot load the DT;
+			fi;
+		else
+			booti;
+		fi;'
 fi
 
 # Common for all boards
 
 run bootcmd_net
-
-
-
