@@ -9,6 +9,8 @@ NPROC=$(($(nproc) - 4))
 NFSROOT="/srv/nfs"
 TFTPROOT="/srv/tftp"
 
+# Only build the main kernel and dtbs and copy to tftp
+KERNEL_ONLY=0
 ##################################################################
 # Currently only for 8m variants
 
@@ -20,7 +22,7 @@ IMX_VVCAM=1
 ##################################################################
 
 # Build IF573 out of tree module
-IF573=0
+IF573=1
 IF573_BASE_PWD=/home/simong/Downloads/8MM_SMARC/if573/release
 # IF573 laird-backport-11.0.0.138
 IF573_VERSION=laird-backport-11.0.0.138
@@ -33,14 +35,16 @@ IF573_VERSION=laird-backport-11.0.0.138
 # Laird fw	https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/firmware/images/
 #		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/firmware/images/laird-bdsdmac-firmware-11.171.0.19.tar.bz2
 # Build Laird out of tree module. And copy in firmware.
-# BD_SDMAC is bdsdmac
-# IF573 is lwb
-# LWB5+ (Summit) lwb5p NOT in laird-backport-11.171.0.19 ??
+# BD_SDMAC is	bdsdmac
+# LWB5 is	brcmfmac ??
+# IF573 is 	lwb
+# LWB5+(Summit) lwb5p NOT in laird-backport-11.171.0.19 ??
 #
 LAIRD_WIFI=0
-LAIRD_WIFI_DEFCONFIG=bdsdmac
+LAIRD_WIFI_DEFCONFIG=lwb
 LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/laird-backport-11.171.0.19
-LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
+#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
+
 #LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
 #
 ##########################################################################################################################################################################################
@@ -53,7 +57,7 @@ LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
 CYPRESS_FW=0
 CYPRESS_FW_BASE_PWD=/home/simong/githome/cypress-firmware
 
-# Intel Wifi
+# Intel Wifi (> 6.1 kernel)
 IWL_WIFI=0
 IWL_WIFI_FW=0
 IWL_WIFI_FW_VER=iwlwifi-ty-59.601f3a66.0
@@ -96,6 +100,13 @@ if [ -n "$1" ]; then
 		variant=unknown
 	fi
 fi
+TARGET=""
+if [ -n "$2" ]; then
+	TARGET=$2
+	# Then only make the kernel
+	# and copy it and dtbo to TFTP
+	KERNEL_ONLY=1
+fi
 
 echo "Variant is $variant"
 
@@ -135,7 +146,7 @@ rm -rf out/*
 #fi
 
 # make -j 16
-make DTC_FLAGS="-@" -j $NPROC
+make DTC_FLAGS="-@" -j $NPROC $TARGET
 
 check_result Linux $?
 
@@ -170,152 +181,154 @@ case $variant in
 		exit 64
 	;;
 esac
-#########################################################################
-#
-# Common stuff
-if [ $IWL_WIFI -eq 1 ]; then
-	cd ../backport-iwlwifi
 
-	make defconfig-iwlwifi-public
-	make -j16
+if [ $KERNEL_ONLY -eq 0 ]; then
+	#########################################################################
+	#
+	# Common stuff
+	if [ $IWL_WIFI -eq 1 ]; then
+		cd ../backport-iwlwifi
 
-	check_result iwlwifi $?
-
-	make modules_install
-
-	if [ $IWL_WIFI_FW -eq 1 ]; then
-		sudo cp ${IWL_WIFI_FW_BASE_PWD}/${IWL_WIFI_FW_VER}/iwlwifi-ty-*.ucode ${NFSROOT}/${SUBDIR}/lib/firmware/
-	fi
-	cd $KERNEL_SRC
-fi
-#########################################################################
-
-# Common iMX stuff
-if [ $variant = 8m ]; then
-	if [ $IMX_GPU_VIV -eq 1 ]; then
-		cd ../kernel-module-imx-gpu-viv
+		make defconfig-iwlwifi-public
 		make -j16
 
-		check_result imx-gpu-viv $?
+		check_result iwlwifi $?
 
 		make modules_install
 
+		if [ $IWL_WIFI_FW -eq 1 ]; then
+			sudo cp ${IWL_WIFI_FW_BASE_PWD}/${IWL_WIFI_FW_VER}/iwlwifi-ty-*.ucode ${NFSROOT}/${SUBDIR}/lib/firmware/
+		fi
 		cd $KERNEL_SRC
 	fi
+	#########################################################################
 
-	if [ $IMX_VVCAM -eq 1 ]; then
-		cd ../isp-vvcam/vvcam/v4l2
+	# Common iMX stuff
+	if [ $variant = 8m ]; then
+		if [ $IMX_GPU_VIV -eq 1 ]; then
+			cd ../kernel-module-imx-gpu-viv
+			make -j16
+
+			check_result imx-gpu-viv $?
+
+			make modules_install
+
+			cd $KERNEL_SRC
+		fi
+
+		if [ $IMX_VVCAM -eq 1 ]; then
+			cd ../isp-vvcam/vvcam/v4l2
+			make -j16
+
+			check_result imx-vvcam $?
+
+			make modules_install
+
+			cd $KERNEL_SRC
+		fi
+
+	fi
+
+	if [ $variant = 93 ]||[ $variant = 8m ]; then
+
+		if [ $IF573 -eq 1 ]; then
+			###############################################################
+			# IF573 laird
+
+			cd ${IF573_BASE_PWD}/${IF573_VERSION}
+			make defconfig-lwb
+
+			make -j $NPROC
+
+			check_result if573-driver $?
+
+			make modules_install -j2
+
+			cd $KERNEL_SRC
+
+			# Copy IF573 firmware
+			sudo cp -a ${IF573_BASE_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
+			###############################################################
+		fi
+
+		if [ $LAIRD_WIFI -eq 1 ]; then
+			###############################################################
+			# Laird WiFi
+
+			cd ${LAIRD_WIFI_BASE_PWD}
+
+			make defconfig-${LAIRD_WIFI_DEFCONFIG}
+
+			make -j $NPROC
+
+			check_result laird_wifi_driver $?
+
+			make modules_install
+
+			cd $KERNEL_SRC
+
+			# Copy laird-firmware
+			sudo cp -a ${LAIRD_WIFI_FW_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
+
+			###############################################################
+		fi
+
+		if [ $CYPRESS_FW -eq 1 ]; then
+			###############################################################
+			# Cypress FW
+
+			cd $CYPRESS_FW_BASE_PWD
+
+			sudo DESTDIR=${NFSROOT}/${SUBDIR} make install
+
+			check_result cypress_fw $?
+
+			cd $KERNEL_SRC
+
+			###############################################################
+		fi
+	fi
+	#
+
+	# Common Mediatek stuff
+	if [ $variant = 510 ]||[ $variant = 700 ]; then
+
+		cd ../mtk-mali-gpu-driver
 		make -j16
 
-		check_result imx-vvcam $?
+		check_result mtk-mali-gpu-driver $?
 
-		make modules_install
-
-		cd $KERNEL_SRC
-	fi
-
-fi
-
-if [ $variant = 93 ]||[ $variant = 8m ]; then
-
-	if [ $IF573 -eq 1 ]; then
-		###############################################################
-		# IF573 laird
-	
-		cd ${IF573_BASE_PWD}/${IF573_VERSION}
-		make defconfig-lwb
-	
-		make -j $NPROC
-	
-		check_result if573-driver $?
-	
 		make modules_install -j2
-	
-		cd $KERNEL_SRC
-	
-		# Copy IF573 firmware
-		sudo cp -a ${IF573_BASE_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
-		###############################################################
-	fi
 
-	if [ $LAIRD_WIFI -eq 1 ]; then
-		###############################################################
-		# Laird WiFi
+		cd ../mtk-vcodec-driver
 
-		cd ${LAIRD_WIFI_BASE_PWD}
+		TARGET_PLATFORM=mt8395 make -j16
 
-		make defconfig-${LAIRD_WIFI_DEFCONFIG}
+		check_result mtk-vcodec-driver $?
 
-		make -j $NPROC
+		make modules_install
 
-		check_result laird_wifi_driver $?
+		cd ../mtk-vcu-driver
+
+		TARGET_PLATFORM=mt8395 EXTRA_SYMBOLS_PATH=../mtk-vcodec-driver/Module.symvers make -j16
+
+		check_result mtk-vcu-driver $?
+
+		make modules_install
+
+		cd ../mtk-camisp-driver
+
+		PLATFORM=mt8188 make -j12
+
+		check_result mtk-camisp-driver $?
 
 		make modules_install
 
 		cd $KERNEL_SRC
 
-		# Copy laird-firmware
-		sudo cp -a ${LAIRD_WIFI_FW_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
-
-		###############################################################
+		sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
 	fi
-
-	if [ $CYPRESS_FW -eq 1 ]; then
-		###############################################################
-		# Cypress FW
-
-		cd $CYPRESS_FW_BASE_PWD
-
-		sudo DESTDIR=${NFSROOT}/${SUBDIR} make install
-
-		check_result cypress_fw $?
-
-		cd $KERNEL_SRC
-
-		###############################################################
-	fi
-fi
-#
-
-# Common Mediatek stuff
-if [ $variant = 510 ]||[ $variant = 700 ]; then
-
-	cd ../mtk-mali-gpu-driver
-	make -j16
-
-	check_result mtk-mali-gpu-driver $?
-
-	make modules_install -j2
-
-	cd ../mtk-vcodec-driver
-
-	TARGET_PLATFORM=mt8395 make -j16
-
-	check_result mtk-vcodec-driver $?
-
-	make modules_install
-
-	cd ../mtk-vcu-driver
-
-	TARGET_PLATFORM=mt8395 EXTRA_SYMBOLS_PATH=../mtk-vcodec-driver/Module.symvers make -j16
-
-	check_result mtk-vcu-driver $?
-
-	make modules_install
-
-	cd ../mtk-camisp-driver
-
-	PLATFORM=mt8188 make -j12
-
-	check_result mtk-camisp-driver $?
-
-	make modules_install
-
-	cd $KERNEL_SRC
-
-	sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
-fi
-# 
+fi # end KERNEL_ONLY=0
 
 sudo cp -av out/lib/modules/${kernel_release} ${NFSROOT}/${SUBDIR}/lib/modules/
 
