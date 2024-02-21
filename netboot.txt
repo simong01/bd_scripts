@@ -116,10 +116,19 @@ elif itest.s "xgeno" == "x${board}" ; then
         setenv fdt_file imx8mm-geno.dtb;
 
 elif itest.s "xnitrogen8mm_som" == "x${board}" ; then
-		detected_board=imx8mm_som
-		setenv tftp_varient 'nitrogen8m'
-		setenv nfs_varient 'nitrogen8m'
-		setenv fdt_file imx8mm-nitrogen8mm_som.dtb
+	detected_board=imx8mm_som
+	setenv tftp_varient 'nitrogen8m'
+	setenv nfs_varient 'nitrogen8m'
+	setenv fdt_file imx8mm-nitrogen8mm_som.dtb
+elif itest.s "xnitrogen-som" == "x${board}" ; then
+	if itest.s x8UL == "x${cpu3}" ; then
+		detected_board=imx8ulp_som
+                setenv tftp_varient 'nitrogen8m'
+                setenv nfs_varient 'nitrogen8m'
+		setenv fdt_file imx8ulp-nitrogen-som.dtb;
+	else
+		echo "!!!! Error: Unknown nitrogen-som board. ${board} ${imx_cpu}"
+	fi
 else
 	echo "!!!! Error: Unknown boundary u-boot. ${board}"
 	exit;
@@ -187,6 +196,18 @@ elif itest.s "ximx8mm_smarc" == "x${detected_board}"; then
 
 elif itest.s "ximx8mm_som" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8MM SOM"
+	run banner
+
+	setenv post_fdt 'run cmd_mipi'
+
+#########################################################################################
+#
+# ***************** 8ULP SOM *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
+	setenv bannertext "Nitrogen 8ULP SOM"
 	run banner
 
 	setenv post_fdt 'run cmd_mipi'
