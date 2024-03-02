@@ -22,7 +22,7 @@ IMX_VVCAM=1
 ##################################################################
 
 # Build IF573 out of tree module
-IF573=1
+IF573=0
 IF573_BASE_PWD=/home/simong/Downloads/8MM_SMARC/if573/release
 # IF573 laird-backport-11.0.0.138
 IF573_VERSION=laird-backport-11.0.0.138
@@ -34,6 +34,9 @@ IF573_VERSION=laird-backport-11.0.0.138
 #
 # Laird fw	https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/firmware/images/
 #		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/firmware/images/laird-bdsdmac-firmware-11.171.0.19.tar.bz2
+#
+# https://github.com/rfpros/cp_release-backports-unreleased
+#
 # Build Laird out of tree module. And copy in firmware.
 # BD_SDMAC is	bdsdmac
 # LWB5 is	brcmfmac ??
@@ -326,8 +329,20 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 		cd $KERNEL_SRC
 
-		sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
+		# Clean up the DTBOs
+		sudo rm ${TFTPROOT}/${SUBDIR}/devicetree/*
+
+		sudo cp arch/arm64/boot/dts/mediatek/mt83x0-tungsten-smarc/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
+
+#		sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
+
+		if [ $variant = 510 ]; then
+			sudo cp arch/arm64/boot/dts/mediatek/mt8370/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
+		elif [ $variant = 700 ]; then
+			sudo cp arch/arm64/boot/dts/mediatek/mt8390/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
+		fi
 	fi
+
 fi # end KERNEL_ONLY=0
 
 sudo cp -av out/lib/modules/${kernel_release} ${NFSROOT}/${SUBDIR}/lib/modules/
