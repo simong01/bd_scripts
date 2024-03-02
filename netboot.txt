@@ -85,9 +85,13 @@ elif itest.s "xmt8390-tungsten-smarc" == "x${board}" ; then
 
 elif itest.s "xmt8390-tungsten_smarc" == "x${board}" ; then
 	echo "!!!! Error: OLD T700 U-boot please update"
-	exit;
+	#exit;
+	detected_board=t700
+	setenv tftp_varient 'tungsten700'
+	setenv nfs_varient 'tungsten700'
+	setenv fdt_file mt8390-tungsten-smarc.dtb;
 	
-elif itest.s "xnitrogen_smarc" == "x${board}" ; then
+elif itest.s "xnitrogen_smarc" == "x${board}" || itest.s "ximx93_smarc" == "x${board}" || itest.s "xnitrogen-smarc" == "x${board}"; then
 	if itest.s x8MP == "x${cpu3}" ; then
 		detected_board=imx8mp_smarc
 		setenv tftp_varient 'nitrogen8m'
@@ -100,14 +104,13 @@ elif itest.s "xnitrogen_smarc" == "x${board}" ; then
                 setenv nfs_varient 'nitrogen8m'
 		setenv fdt_file imx8mm-nitrogen_smarc.dtb;
 
-	elif itest.s x93 == "x${cpu3}" ; then
+	elif itest.s xx93 == "x${cpu3}" ; then
 		detected_board=imx93_smarc
 		setenv tftp_varient 'nitrogen93'
 		setenv nfs_varient 'nitrogen93'
-		setenv fdt_file imx93-nitrogen-smarc.dtb
 
 	else
-		echo "!!!! Error: Unknown nitrogen_smarc board. ${board} ${imx_cpu}"
+		echo "!!!! Error: Unknown nitrogen_smarc board. ${board} ${imx_cpu} cpu3:${cpu3}"
 	fi
 elif itest.s "xgeno" == "x${board}" ; then
 	detected_board=imx8mm_geno
@@ -175,7 +178,9 @@ elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8MM GENO"
 	run banner
 
-	setenv post_fdt 'run cmd_mipi'
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
 
 #########################################################################################
 #
@@ -188,6 +193,10 @@ elif itest.s "ximx8mm_smarc" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8MM SMARC"
 	run banner
 
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
+
 #########################################################################################
 #
 # ***************** 8MM SOM *************************************************************
@@ -198,7 +207,9 @@ elif itest.s "ximx8mm_som" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8MM SOM"
 	run banner
 
-	setenv post_fdt 'run cmd_mipi'
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
 
 #########################################################################################
 #
@@ -210,7 +221,9 @@ elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8ULP SOM"
 	run banner
 
-	setenv post_fdt 'run cmd_mipi'
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
 
 #########################################################################################
 #
@@ -222,7 +235,9 @@ elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
 	setenv bannertext "Nitrogen 8MP SMARC"
 	run banner
 
-	setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
+	fi
 
 #########################################################################################
 #
@@ -231,7 +246,15 @@ elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
 #########################################################################################
 
 elif itest.s "ximx93_smarc" == "x${detected_board}"; then
-	setenv bannertext "Nitrogen 93 SMARC"
+	i2c dev 0
+	i2c probe 0x5d
+	if test $? = "0"; then
+		setenv fdt_file imx93-nitrogen-smarc-lvds.dtb
+		setenv bannertext "Nitrogen 93 SMARC *** LVDS detected ***"
+	else
+		setenv fdt_file imx93-nitrogen-smarc.dtb
+		setenv bannertext "Nitrogen 93 SMARC default device tree"
+	fi
 	run banner
 fi
 
