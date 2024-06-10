@@ -11,6 +11,13 @@ TFTPROOT="/srv/tftp"
 
 # Only build the main kernel and dtbs and copy to tftp
 KERNEL_ONLY=0
+
+#	make defconfig
+#	make boundary_defconfig
+#       make ezurio_defconfig
+#	make imx_v8_defconfig
+#config_target=boundary_defconfig
+config_target=ezurio_defconfig
 ##################################################################
 # Currently only for 8m variants
 
@@ -18,7 +25,7 @@ KERNEL_ONLY=0
 IMX_GPU_VIV=1
 
 # isp-vvcam
-IMX_VVCAM=1
+IMX_VVCAM=0
 ##################################################################
 
 # Build IF573 out of tree module
@@ -32,10 +39,18 @@ IF573_VERSION=laird-backport-11.0.0.138
 # Laird drivers https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/backports/images/
 # 		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/backports/images/backports-laird-11.171.0.19.tar.bz2
 #
+#		https://github.com/rfpros/cp_release-backports-unreleased/archive/refs/tags/LRD-REL-11.171.0.24.tar.gz
+#
 # Laird fw	https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/firmware/images/
 #		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/firmware/images/laird-bdsdmac-firmware-11.171.0.19.tar.bz2
 #
+#		https://github.com/rfpros/cp_release-radio_firmware-unreleased/archive/refs/tags/LRD-REL-11.171.0.24.tar.gz
+#
+# SW
 # https://github.com/rfpros/cp_release-backports-unreleased
+#
+# FW
+# https://github.com/rfpros/cp_release-radio_firmware-unreleased
 #
 # Build Laird out of tree module. And copy in firmware.
 # BD_SDMAC is	bdsdmac
@@ -44,11 +59,17 @@ IF573_VERSION=laird-backport-11.0.0.138
 # LWB5+(Summit) lwb5p NOT in laird-backport-11.171.0.19 ??
 #
 LAIRD_WIFI=0
-LAIRD_WIFI_DEFCONFIG=lwb
-LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/laird-backport-11.171.0.19
-#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-bdsdmac-firmware-11.171.0.19
+# LAIRD_WIFI_DEFCONFIG=regression-test
+# bdimx8 in next release
+LAIRD_WIFI_DEFCONFIG=sona_nx611
+#LAIRD_WIFI_DEFCONFIG=bdimx6
+LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
+LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
+#LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
+#LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware
 
-#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
+# TODO Copy all relevant firmwares
+# LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
 #
 ##########################################################################################################################################################################################
 
@@ -78,6 +99,32 @@ check_result() {
 		exit $RESULT
 	fi
 }
+
+
+# Cross-Compile Environment
+set_cc_env() {
+	export KERNEL_SRC=$PWD
+
+	# Ubuntu is export INSTALL_MOD_PATH=$PWD/ubuntunize64/linux-staging
+	export INSTALL_MOD_PATH=$PWD/out
+
+	export ARCH=arm64
+
+	export CROSS_COMPILE=aarch64-linux-gnu-
+
+	export KERNEL_SRC=$PWD
+
+	export KLIB=$KERNEL_SRC/out
+
+	export KLIB_BUILD=$KERNEL_SRC
+}
+
+if [ ! -f $0 ]; then
+	# "you sourced me"
+	set_cc_env
+	echo "Cross Compile environment set"
+	return
+fi
 
 if [ -n "$1" ]; then
 
@@ -122,31 +169,23 @@ if [ $variant = "unknown" ]; then
 	exit 127
 fi
 
-export KERNEL_SRC=$PWD
-
-# Ubuntu is export INSTALL_MOD_PATH=$PWD/ubuntunize64/linux-staging
-export INSTALL_MOD_PATH=$PWD/out
-
-export ARCH=arm64
-
-export CROSS_COMPILE=aarch64-linux-gnu-
-
-export KERNEL_SRC=$PWD
-
-export KLIB=$KERNEL_SRC/out
-
-export KLIB_BUILD=$KERNEL_SRC
-
-# make clean
-
 rm -rf out/*
+
+set_cc_env
 
 # make imx93_bd_smarc_defconfig
 #if [ $variant = "510" ]; then
 #	make defconfig
 #else
-	make boundary_defconfig
+#	make defconfig
+#	make boundary_defconfig
+#	make imx_v8_defconfig
 #fi
+make $config_target
+
+check_result Linux-config $?
+
+# make clean
 
 # make -j 16
 make DTC_FLAGS="-@" -j $NPROC $TARGET
@@ -156,11 +195,12 @@ check_result Linux $?
 kernel_release=`cat include/config/kernel.release`
 
 make modules_install
+check_result Linux-modules_install $?
 
 case $variant in
 
 	8m)
-		DTBS="freescale/imx8m*nitrogen*.dtb freescale/imx8mm-geno.dtb"
+		DTBS="freescale/imx8*nitrogen*.dtb freescale/imx8mm-geno.dtb freescale/imx8mp-mmr.dtb freescale/imx8mp-abiomed.dtb freescale/imx8mm-ash.dtb"
 		SUBDIR="nitrogen8m"
 	;;
 
