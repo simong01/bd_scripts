@@ -5,6 +5,8 @@
 #
 # setenv tftpserverip 192.168.16.10
 #
+# setenv tftpserverip 10.16.64.148
+#
 # tftp ${loadaddr} ${tftpserverip}:netboot.scr; source ${loadaddr}
 #
 # OR ...
@@ -12,6 +14,16 @@
 # dhcp ${loadaddr} netboot.scr; source ${loadaddr} 
 #
 # OR ...
+#
+# setenv tftpserverip 10.16.64.148; dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
+#
+# setenv tftpserverip 10.16.64.148; dhcp ${scriptaddr} ${tftpserverip}:netboot.scr; source ${scriptaddr}
+#
+# setenv tftpserverip 192.168.16.10; dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
+#
+#
+# setenv tftpserverip 10.16.64.148; dhcp ${scriptaddr} ${tftpserverip}:netboot.scr; setenv farshid 1; source ${scriptaddr}
+#
 #
 # dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
 #
@@ -23,10 +35,22 @@
 #
 # setenv xtrace yes
 #
+# To add to tftp_varient and nfs_varient
+#
+# setenv postvar "test"
+#
+# Then for eg. tftp_varient=nitrogen8m -> tftp_varient=nitrogen8mtest
+#
+
+# U-boot upgrade
+#
+# setenv serverip 10.16.64.148; dhcp ${scriptaddr} net_upgradeu.scr; source ${scriptaddr}
+#
+
 
 # Point to your server
 
-setenv tftpserverip 192.168.16.10
+# setenv tftpserverip 192.168.16.10
 setenv nfs_base /srv/nfs
 
 ############################################################################
@@ -65,7 +89,7 @@ setexpr cpu2 sub "^(..?).*" "\\1" "${imx_cpu}"
 setexpr cpu3 sub "^(..?.?).*" "\\1" "${imx_cpu}"
 
 ###################################
-# Detect board. And set fdt_file.
+# Detect board.
 # Add new boards here. (detected_board)
 
 if itest.s "x" == "x${board}" ; then
@@ -73,65 +97,57 @@ if itest.s "x" == "x${board}" ; then
         exit;
 elif itest.s "xmt8370-tungsten-smarc" == "x${board}" ; then
 	detected_board=t510
-	setenv tftp_varient 'tungsten510'
-	setenv nfs_varient 'tungsten510'
-	setenv fdt_file mt8370-tungsten-smarc.dtb;
 
 elif itest.s "xmt8390-tungsten-smarc" == "x${board}" ; then
 	detected_board=t700
-	setenv tftp_varient 'tungsten700'
-	setenv nfs_varient 'tungsten700'
-	setenv fdt_file mt8390-tungsten-smarc.dtb;
 
 elif itest.s "xmt8390-tungsten_smarc" == "x${board}" ; then
 	echo "!!!! Error: OLD T700 U-boot please update"
 	#exit;
 	detected_board=t700
-	setenv tftp_varient 'tungsten700'
-	setenv nfs_varient 'tungsten700'
-	setenv fdt_file mt8390-tungsten-smarc.dtb;
 	
 elif itest.s "xnitrogen_smarc" == "x${board}" || itest.s "ximx93_smarc" == "x${board}" || itest.s "xnitrogen-smarc" == "x${board}"; then
 	if itest.s x8MP == "x${cpu3}" ; then
 		detected_board=imx8mp_smarc
-		setenv tftp_varient 'nitrogen8m'
-		setenv nfs_varient 'nitrogen8m'
-		setenv fdt_file imx8mp-nitrogen_smarc.dtb;
 
 	elif itest.s x8MM == "x${cpu3}" ; then
                 detected_board=imx8mm_smarc
-                setenv tftp_varient 'nitrogen8m'
-                setenv nfs_varient 'nitrogen8m'
-		setenv fdt_file imx8mm-nitrogen_smarc.dtb;
 
-	elif itest.s xx93 == "x${cpu3}" ; then
+	elif itest.s x93 == "x${cpu3}"  || itest.s xx93 == "x${cpu3}" ; then
 		detected_board=imx93_smarc
-		setenv tftp_varient 'nitrogen93'
-		setenv nfs_varient 'nitrogen93'
 
 	else
 		echo "!!!! Error: Unknown nitrogen_smarc board. ${board} ${imx_cpu} cpu3:${cpu3}"
+		exit;
 	fi
+elif itest.s "xabiomed" == "x${board}" ; then
+	detected_board=imx8mp_abiomed
+
+elif itest.s "xash" == "x${board}" ; then
+	detected_board=imx8mm_ash
+
 elif itest.s "xgeno" == "x${board}" ; then
 	detected_board=imx8mm_geno
-	setenv tftp_varient 'nitrogen8m'
-        setenv nfs_varient 'nitrogen8m'
-        setenv fdt_file imx8mm-geno.dtb;
 
 elif itest.s "xnitrogen8mm_som" == "x${board}" ; then
 	detected_board=imx8mm_som
-	setenv tftp_varient 'nitrogen8m'
-	setenv nfs_varient 'nitrogen8m'
-	setenv fdt_file imx8mm-nitrogen8mm_som.dtb
+
+elif itest.s "xnitrogen8mm_rev2" == "x${board}" ; then
+	detected_board=imx8mm_sbc
+
 elif itest.s "xnitrogen-som" == "x${board}" ; then
 	if itest.s x8UL == "x${cpu3}" ; then
 		detected_board=imx8ulp_som
-                setenv tftp_varient 'nitrogen8m'
-                setenv nfs_varient 'nitrogen8m'
-		setenv fdt_file imx8ulp-nitrogen-som.dtb;
 	else
 		echo "!!!! Error: Unknown nitrogen-som board. ${board} ${imx_cpu}"
 	fi
+elif itest.s "xnitrogen8mp" == "x${board}" ; then
+	detected_board=imx8mp_som
+
+elif itest.s "xmmr" == "x${board}" ; then
+	detected_board=imx8mp_mmr
+elif itest.s "xnitrogen8mp_vm" == "x${board}" ; then
+	detected_board=imx8mp_vm
 else
 	echo "!!!! Error: Unknown boundary u-boot. ${board}"
 	exit;
@@ -144,9 +160,6 @@ fi
 #														#
 #################################################################################################################
 
-# Common variables
-setenv nfsroot ${nfs_base}/${nfs_varient};
-#
 
 #########################################################################################
 #
@@ -155,6 +168,19 @@ setenv nfsroot ${nfs_base}/${nfs_varient};
 #########################################################################################
 
 if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_board}"; then
+	if itest.s "xt510" == "x${detected_board}"; then
+		setenv tftp_varient "tungsten510${postvar}"
+		setenv nfs_varient "tungsten510${postvar}"
+		setenv fdt_file mt8370-tungsten-smarc.dtb;
+	elif itest.s "xt700" == "x${detected_board}"; then
+		setenv tftp_varient "tungsten700${postvar}"
+		setenv nfs_varient "tungsten700${postvar}"
+		setenv fdt_file mt8390-tungsten-smarc.dtb;
+	else
+		setenv bannertext "Tungsten  UNKNOWN BOARD ${detected_board}"
+		exit;
+	fi
+
 	setenv bannertext "Tungsten ${detected_board}"
 	run banner
 
@@ -170,11 +196,37 @@ if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_bo
 
 #########################################################################################
 #
-# ***************** 8MM GENO*************************************************************
+# ***************** 8MM AltoSHAAM *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mm_ash" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+        setenv nfs_varient "nitrogen8m${postvar}"
+        #setenv fdt_file imx8mm-ash8mm.dtb;
+        setenv fdt_file imx8mm-ash.dtb;
+	setenv bannertext "Nitrogen 8MM AltoSHAAM"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
+
+	# This u-boot does NOT have netargs ?? So ...
+
+	setenv nfsroot ${nfs_base}/${nfs_varient};
+	setenv netargs 'setenv bootargs console=${console},115200 root=/dev/nfs ip=dhcp nfsroot=$tftpserverip:$nfsroot,v3,tcp rw rootwait'
+
+#########################################################################################
+#
+# ***************** 8MM GENO ************************************************************
 #
 #########################################################################################
 
 elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+        setenv nfs_varient "nitrogen8m${postvar}"
+        setenv fdt_file imx8mm-geno.dtb;
 	setenv bannertext "Nitrogen 8MM GENO"
 	run banner
 
@@ -190,6 +242,9 @@ elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
 
 elif itest.s "ximx8mm_smarc" == "x${detected_board}"; then
 
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mm-nitrogen_smarc.dtb;
 	setenv bannertext "Nitrogen 8MM SMARC"
 	run banner
 
@@ -204,7 +259,28 @@ elif itest.s "ximx8mm_smarc" == "x${detected_board}"; then
 #########################################################################################
 
 elif itest.s "ximx8mm_som" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mm-nitrogen8mm_som.dtb
 	setenv bannertext "Nitrogen 8MM SOM"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
+
+#########################################################################################
+#
+# ***************** 8MM SBC *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mm_sbc" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	# fdt_file=imx8mm-${board}.dtb
+	setenv fdt_file imx8mm-nitrogen8mm_rev2.dtb
+	setenv bannertext "Nitrogen 8MM SBC Rev. 2"
 	run banner
 
 	if test ${post_fdt} = ""; then
@@ -218,6 +294,10 @@ elif itest.s "ximx8mm_som" == "x${detected_board}"; then
 #########################################################################################
 
 elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8ulp-nitrogen-som.dtb;
+	# setenv fdt_file imx8ulp-nitrogen-som-m33.dtb;
 	setenv bannertext "Nitrogen 8ULP SOM"
 	run banner
 
@@ -227,12 +307,82 @@ elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
 
 #########################################################################################
 #
-# ***************** 8MP SMARC ************************************************************
+# ***************** 8MP ABIOMED**********************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mp_abiomed" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mp-abiomed.dtb;
+	setenv bannertext "Nitrogen 8MP ABIOMED"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_lvds cmd_hdmi'
+	fi
+
+#########################################################################################
+#
+# ***************** 8MP MMR *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mp_mmr" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mp-mmr.dtb;
+	setenv bannertext "Nitrogen 8MP MMR"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_lvds cmd_hdmi'
+	fi
+
+	if test -n "${farshid}"; then
+		setenv bannertext "FARSHIDs NFS"
+		run banner
+		setenv fdt_file "imx8mp-${board}${board_rv}${board_carrier}${board_modifier}.dtb"
+		setenv nfsroot /home/farshid/PROG/focal8mp
+		setenv tftpserverip 10.16.64.149
+		setenv bootargs_base 'setenv bootargs console=$console,115200 consoleblank=0 --no-log loglevel=7 pci=nomsi wlcore.mac=$wlmac snd.slots=,snd-soc-imx-hdmi cpu=${imx_cpu} board=${board}'
+		setenv bootargs_video 'setenv bootargs $bootargs mxc_hdmi.only_cea=0 ; fdt resize'
+		setenv bootargs_nfs 'setenv bootargs $bootargs root=/dev/nfs ip=dhcp nfsroot=$tftpserverip:$nfsroot,v3,tcp rw rootwait'
+		setenv load_fdt_dhcp 'dhcp $fdt_addr $tftpserverip:$fdt_file && fdt addr $fdt_addr'
+		setenv boot_tftp 'tftp $loadaddr $tftpserverip:Image && booti $loadaddr - $fdt_addr'
+		setenv bootcmd_net 'run load_fdt_dhcp bootargs_base bootargs_nfs bootargs_video cmd_mipi boot_tftp'
+		run bootcmd_net
+	fi
+
+#########################################################################################
+#
+# ***************** 8MP SMARC ***********************************************************
 #
 #########################################################################################
 
 elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mp-nitrogen_smarc.dtb;
 	setenv bannertext "Nitrogen 8MP SMARC"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi cmd_lvds2 cmd_hdmi'
+		# setenv post_fdt 'run cmd_lvds cmd_hdmi'
+	fi
+
+#########################################################################################
+#
+# ***************** 8MP VM    ***********************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mp_vm" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mp-nitrogen8mp_vm.dtb;
+	setenv bannertext "Nitrogen 8MP VM"
 	run banner
 
 	if test ${post_fdt} = ""; then
@@ -241,23 +391,63 @@ elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
 
 #########################################################################################
 #
+# ***************** 8MP SOM   ***********************************************************
+#
+#########################################################################################
+elif itest.s "ximx8mp_som" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mp-nitrogen8mp_r20-enc.dtb;
+	setenv bannertext "Nitrogen 8MP SOM"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
+	fi
+
+
+#########################################################################################
+#
 # ***************** 93 SMARC ************************************************************
 #
 #########################################################################################
 
 elif itest.s "ximx93_smarc" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen93${postvar}"
+	setenv nfs_varient "nitrogen93${postvar}"
 	i2c dev 0
 	i2c probe 0x5d
 	if test $? = "0"; then
-		setenv fdt_file imx93-nitrogen-smarc-lvds.dtb
-		setenv bannertext "Nitrogen 93 SMARC *** LVDS detected ***"
-	else
+		setenv touch_addr "0x5d"
+	fi
+	i2c probe 0x14
+	if test $? = "0"; then
+		setenv touch_addr "0x14"
+		setenv post_fdt 'fdt set /soc@0/bus@44000000/i2c@44340000/touchscreen@5d status disabled; fdt set /soc@0/bus@44000000/i2c@44340000/touchscreen@14 status okay;'
+	fi
+	i2c probe 0x38
+	if test $? = "0"; then
+		setenv touch_addr "0x38"
+	fi
+	if itest.s "x" == "x${touch_addr}"; then
 		setenv fdt_file imx93-nitrogen-smarc.dtb
 		setenv bannertext "Nitrogen 93 SMARC default device tree"
+	else
+		setenv fdt_file imx93-nitrogen-smarc-lvds.dtb
+		setenv bannertext "Nitrogen 93 SMARC *** LVDS detected Touch @ ${touch_addr} ***"
 	fi
 	run banner
+	# setenv netargs "${netargs} no_console_suspend initcall_debug"
 fi
 
+
+#########################################################################################
+# Common variables
+setenv nfsroot ${nfs_base}/${nfs_varient};
+#
+#if itest.s "x" == "x${tftpserverip}"; then
+#        tftpserverip=${serverip}
+#fi
 # Common for all IMX boards
 if test -n "${imx_cpu}"; then
 
@@ -269,7 +459,7 @@ if test -n "${imx_cpu}"; then
 			then
 				if test -n "${post_fdt}";
 				then
-					${post_fdt};
+					run post_fdt;
 				fi
 				booti ${loadaddr} - ${fdt_addr};
 			else
@@ -281,5 +471,7 @@ if test -n "${imx_cpu}"; then
 fi
 
 # Common for all boards
-
+if itest.s "x" != "x${cmd_custom}" ; then
+        run cmd_custom
+fi
 run bootcmd_net
