@@ -141,6 +141,9 @@ elif itest.s "xnitrogen-som" == "x${board}" ; then
 	else
 		echo "!!!! Error: Unknown nitrogen-som board. ${board} ${imx_cpu}"
 	fi
+elif itest.s "xnitrogen8_lite" == "x${board}" ; then
+	detected_board=imx8mm_lite
+
 elif itest.s "xnitrogen8mp" == "x${board}" ; then
 	detected_board=imx8mp_som
 
@@ -148,6 +151,8 @@ elif itest.s "xmmr" == "x${board}" ; then
 	detected_board=imx8mp_mmr
 elif itest.s "xnitrogen8mp_vm" == "x${board}" ; then
 	detected_board=imx8mp_vm
+elif itest.s "xnitrogen6_max" == "x${board}" ; then
+	detected_board=imx6q_max
 else
 	echo "!!!! Error: Unknown boundary u-boot. ${board}"
 	exit;
@@ -233,6 +238,20 @@ elif itest.s "ximx8mm_geno" == "x${detected_board}"; then
 	if test ${post_fdt} = ""; then
 		setenv post_fdt 'run cmd_mipi'
 	fi
+
+#########################################################################################
+#
+# ***************** 8MM lite *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mm_lite" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+        setenv nfs_varient "nitrogen8m${postvar}"
+        setenv fdt_file imx8mm-nitrogen8_lite.dtb;
+	setenv bannertext "Nitrogen 8MM lite"
+	run banner
+
 
 #########################################################################################
 #
@@ -436,14 +455,50 @@ elif itest.s "ximx93_smarc" == "x${detected_board}"; then
 		setenv fdt_file imx93-nitrogen-smarc-lvds.dtb
 		setenv bannertext "Nitrogen 93 SMARC *** LVDS detected Touch @ ${touch_addr} ***"
 	fi
+	# setenv fdt_file imx93-nitrogen-smarc-if573-m2.dtb
+	# setenv bannertext "Nitrogen 93 SMARC *** if573-m2 ***"
 	run banner
 	# setenv netargs "${netargs} no_console_suspend initcall_debug"
-fi
 
+#########################################################################################
+#
+# ***************** NITROGEN6-MAX *******************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx6q_max" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen6x${postvar}"
+	setenv nfs_varient "nitrogen6x${postvar}"
+	setenv bannertext "Nitrogen 6x MAX"
+
+	setenv fdt_file "imx6q-${board}.dtb"
+	# setenv fdt_file "imx6q-ltch.dtb"
+
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_lvds cmd_hdmi'
+	fi
+
+	# echo "TODO :)"
+	# exit;
+
+#########################################################################################
+#
+#
+#########################################################################################
+
+else
+	echo "!!!! Error: Unknown detected board. ${detected_board}. You detected it but forgot to implement it!"
+        exit;
+fi
+#########################################################################################
 
 #########################################################################################
 # Common variables
 setenv nfsroot ${nfs_base}/${nfs_varient};
+
+echo "nfsroot is ${nfsroot}"
 #
 #if itest.s "x" == "x${tftpserverip}"; then
 #        tftpserverip=${serverip}
@@ -451,7 +506,22 @@ setenv nfsroot ${nfs_base}/${nfs_varient};
 # Common for all IMX boards
 if test -n "${imx_cpu}"; then
 
-	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/Image;
+	setenv kernelimage "Image"
+	setenv bootcommand "booti"
+
+	if itest.s "x6Q" == "x${imx_cpu}"; then
+		setenv kernelimage "zImage"
+		setenv bootcommand "bootz"
+		setenv netargs 'setenv bootargs console=${console},${baudrate} root=/dev/nfs ip=dhcp nfsroot=${serverip}:${nfsroot},v3,tcp'
+	fi
+
+	if itest.s x${console} != x ; then
+		setenv bootargs ${bootargs} console=${console},115200
+	fi
+
+	setenv bootargs ${bootargs} vmalloc=${vmalloc} consoleblank=${consoleblank} rootwait fixrtc cpu=${imx_cpu} board=${board} uboot_release=${uboot_release}
+
+	setenv bootcmd_net 'run netargs; dhcp ${loadaddr} ${tftpserverip}:${tftp_varient}/${kernelimage};
 		if test ${boot_fdt} = yes || test ${boot_fdt} = try;
 		then
 			if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file};
@@ -461,12 +531,13 @@ if test -n "${imx_cpu}"; then
 				then
 					run post_fdt;
 				fi
-				booti ${loadaddr} - ${fdt_addr};
+				${bootcommand} ${loadaddr} - ${fdt_addr};
 			else
 				echo WARN: Cannot load the DT;
 			fi;
 		else
-			booti;
+			echo "Simple boot, no device-tree ..."
+			${bootcommand};
 		fi;'
 fi
 
