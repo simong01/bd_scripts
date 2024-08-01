@@ -129,6 +129,9 @@ elif itest.s "xash" == "x${board}" ; then
 elif itest.s "xgeno" == "x${board}" ; then
 	detected_board=imx8mm_geno
 
+elif itest.s "xnitrogen8m" == "x${board}" ; then
+	detected_board=imx8mq
+
 elif itest.s "xnitrogen8mm_som" == "x${board}" ; then
 	detected_board=imx8mm_som
 
@@ -300,6 +303,23 @@ elif itest.s "ximx8mm_sbc" == "x${detected_board}"; then
 	# fdt_file=imx8mm-${board}.dtb
 	setenv fdt_file imx8mm-nitrogen8mm_rev2.dtb
 	setenv bannertext "Nitrogen 8MM SBC Rev. 2"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
+
+#########################################################################################
+#
+# ***************** 8MQ SBC *************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8mq" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	setenv fdt_file imx8mq-${board}.dtb
+	setenv bannertext "Nitrogen 8M (Q) "
 	run banner
 
 	if test ${post_fdt} = ""; then
