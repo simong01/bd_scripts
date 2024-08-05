@@ -2,7 +2,7 @@
 
 variant=unknown
 
-variants="93 510 700 8m"
+variants="6x 93 510 700 8m"
 
 NPROC=$(($(nproc) - 4))
 
@@ -16,13 +16,13 @@ KERNEL_ONLY=0
 #	make boundary_defconfig
 #       make ezurio_defconfig
 #	make imx_v8_defconfig
-#config_target=boundary_defconfig
-config_target=ezurio_defconfig
+config_target=boundary_defconfig
+# config_target=ezurio_defconfig
 ##################################################################
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=1
+IMX_GPU_VIV=0
 
 # isp-vvcam
 IMX_VVCAM=0
@@ -56,21 +56,34 @@ IF573_VERSION=laird-backport-11.0.0.138
 # BD_SDMAC is	bdsdmac
 # LWB5 is	brcmfmac ??
 # IF573 is 	lwb
-# LWB5+(Summit) lwb5p NOT in laird-backport-11.171.0.19 ??
+# LWB5+(Summit) lwb ??
 #
 LAIRD_WIFI=0
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
-LAIRD_WIFI_DEFCONFIG=sona_nx611
-#LAIRD_WIFI_DEFCONFIG=bdimx6
-LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
-LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
-#LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
-#LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware
+# LAIRD_WIFI_DEFCONFIG=sona_nx611
+# LAIRD_WIFI_DEFCONFIG=bdimx6
+# LAIRD_WIFI_DEFCONFIG=bdimx8
+LAIRD_WIFI_DEFCONFIG=lwb
 
+#LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
+#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
+
+#LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/summit-backports-12.29.0.13
+#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
+LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware
 # TODO Copy all relevant firmwares
 # LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
 #
+##########################################################################################################################################################################################
+#
+# NXP IW611 Wifi
+
+NXP_WIFI=0
+NXP_WIFI_BASE_PWD=/home/simong/githome/mwifiex/mxm_wifiex/wlan_src
+NXP_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
 ##########################################################################################################################################################################################
 
 # QCACLD_BASE_PWD=/home/simong/githome/qcacld-2.0/backport
@@ -103,26 +116,44 @@ check_result() {
 
 # Cross-Compile Environment
 set_cc_env() {
+	cc_env=$1
+
 	export KERNEL_SRC=$PWD
 
 	# Ubuntu is export INSTALL_MOD_PATH=$PWD/ubuntunize64/linux-staging
 	export INSTALL_MOD_PATH=$PWD/out
 
-	export ARCH=arm64
+	if [ $cc_env = 64 ]; then
+		export ARCH=arm64
 
-	export CROSS_COMPILE=aarch64-linux-gnu-
+		export CROSS_COMPILE=aarch64-linux-gnu-
+
+	else
+
+		export ARCH=arm
+
+		export CROSS_COMPILE=arm-linux-gnueabihf-
+	fi
 
 	export KERNEL_SRC=$PWD
+
+	# For NXP IW611
+	export KERNELDIR=$PWD
 
 	export KLIB=$KERNEL_SRC/out
 
 	export KLIB_BUILD=$KERNEL_SRC
+
+	echo "Cross Compile environment ${cc_env}bit set"
 }
 
 if [ ! -f $0 ]; then
 	# "you sourced me"
-	set_cc_env
-	echo "Cross Compile environment set"
+	cc_env=64
+	if [ -n "$1" ]&&[ $1 = 32 ]; then
+		cc_env=32
+	fi
+	set_cc_env $cc_env
 	return
 fi
 
@@ -171,7 +202,13 @@ fi
 
 rm -rf out/*
 
-set_cc_env
+cc_env=64
+
+if [ $variant = "6x" ]; then
+	cc_env=32
+fi
+
+set_cc_env $cc_env
 
 # make imx93_bd_smarc_defconfig
 #if [ $variant = "510" ]; then
@@ -187,8 +224,12 @@ check_result Linux-config $?
 
 # make clean
 
-# make -j 16
-make DTC_FLAGS="-@" -j $NPROC $TARGET
+if [ $cc_env = 32 ]; then
+	make zImage modules dtbs -j $NPROC $TARGET
+else
+	# make -j 16
+	make DTC_FLAGS="-@" -j $NPROC $TARGET
+fi
 
 check_result Linux $?
 
@@ -199,13 +240,18 @@ check_result Linux-modules_install $?
 
 case $variant in
 
+	6x)
+		DTBS="imx6*nitrogen*.dtb imx6q-ltch.dtb"
+		SUBDIR="nitrogen6x"
+	;;
+
 	8m)
 		DTBS="freescale/imx8*nitrogen*.dtb freescale/imx8mm-geno.dtb freescale/imx8mp-mmr.dtb freescale/imx8mp-abiomed.dtb freescale/imx8mm-ash.dtb"
 		SUBDIR="nitrogen8m"
 	;;
 
 	93)
-		DTBS="freescale/imx93-nitrogen-smarc.dtb freescale/imx93-nitrogen-smarc-lvds.dtb"
+		DTBS="freescale/imx93-nitrogen-smarc*.dtb"
 		SUBDIR="nitrogen93"
 	;;
 
@@ -300,7 +346,15 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 			cd ${LAIRD_WIFI_BASE_PWD}
 
+			LAIRD_WIFI_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+
+			make mrproper
+
+			check_result laird_wifi_driver_clean $?
+
 			make defconfig-${LAIRD_WIFI_DEFCONFIG}
+
+			check_result laird_wifi_defconfig
 
 			make -j $NPROC
 
@@ -311,7 +365,43 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 			cd $KERNEL_SRC
 
 			# Copy laird-firmware
-			sudo cp -a ${LAIRD_WIFI_FW_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
+			cd ${LAIRD_WIFI_FW_PWD}
+
+			check_result laird_wifi_firmware $?
+
+			LAIRD_WIFI_FW_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+
+			sudo cp -a lib/* ${NFSROOT}/${SUBDIR}/lib/
+
+			cd $KERNEL_SRC
+
+			###############################################################
+		fi
+
+		if [ $NXP_WIFI -eq 1 ]; then
+			###############################################################
+			# NXP WiFi
+
+			cd ${NXP_WIFI_BASE_PWD}
+
+			make clean
+
+			check_result nxp_wifi_driver_clean $?
+
+			# make defconfig-${LAIRD_WIFI_DEFCONFIG}
+
+			make -j $NPROC
+
+			check_result nxp_wifi_driver $?
+
+			make build
+
+			sudo cp ../bin_wlan/*.ko ${NFSROOT}/${SUBDIR}/home/root/
+
+			cd $KERNEL_SRC
+
+			# Copy wifi-firmware
+			sudo cp -a ${NXP_WIFI_FW_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
 
 			###############################################################
 		fi
@@ -387,11 +477,20 @@ fi # end KERNEL_ONLY=0
 
 sudo cp -av out/lib/modules/${kernel_release} ${NFSROOT}/${SUBDIR}/lib/modules/
 
-sudo cp arch/arm64/boot/Image ${TFTPROOT}/${SUBDIR}/
+if [ $cc_env = 32 ]; then
+	sudo cp arch/arm/boot/zImage ${TFTPROOT}/${SUBDIR}/
+else
+	sudo cp arch/arm64/boot/Image ${TFTPROOT}/${SUBDIR}/
+fi
 
-echo "\nCopying DTBs ..."
+echo "\nCopying ${cc_env}bit DTBs ..."
 for i in $DTBS; do
-	sudo cp -v arch/arm64/boot/dts/${i} ${TFTPROOT}/${SUBDIR}/
+	if [ $cc_env = 32 ]; then
+		arm_bits=''
+	else
+		arm_bits=64
+	fi
+	sudo cp -v arch/arm${arm_bits}/boot/dts/${i} ${TFTPROOT}/${SUBDIR}/
 done
 echo "----------------"
 echo
@@ -400,6 +499,11 @@ sudo chown -R root:root ${NFSROOT}/${SUBDIR}/lib/modules/${kernel_release}
 
 
 echo "\nBuilt kernel $kernel_release\n"
+
+if [ $LAIRD_WIFI -eq 1 ]; then
+	echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
+	echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
+fi
 
 echo "Done!"
 
