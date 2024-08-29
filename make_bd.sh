@@ -2,7 +2,9 @@
 
 variant=unknown
 
-variants="6x 93 510 700 8m"
+variants="62 6x 93 510 700 8m"
+
+vnames="Carbon_AM625 Nitrogen_6X Nitrogen_93 Tungsten_510 Tungsten_700 Nitrogen_8M_series"
 
 NPROC=$(($(nproc) - 4))
 
@@ -10,19 +12,20 @@ NFSROOT="/srv/nfs"
 TFTPROOT="/srv/tftp"
 
 # Only build the main kernel and dtbs and copy to tftp
-KERNEL_ONLY=0
+KERNEL_ONLY=1
 
 #	make defconfig
 #	make boundary_defconfig
 #       make ezurio_defconfig
 #	make imx_v8_defconfig
-config_target=boundary_defconfig
+# config_target=boundary_defconfig
 # config_target=ezurio_defconfig
+# config_target=defconfig
 ##################################################################
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=0
+IMX_GPU_VIV=1
 
 # isp-vvcam
 IMX_VVCAM=0
@@ -161,8 +164,11 @@ if [ -n "$1" ]; then
 
 	if [ $1 = "-h" ]; then
 		echo "Possible variants:\n"
-		for i in $variants; do
-			echo "$i\n"
+		i=1
+		for this_varient in $variants; do
+			echo -n "$this_varient\t- "
+			echo ${vnames} | cut -d' ' -f${i}
+			i=$((i+1))
 		done
 		echo
 		exit
@@ -210,6 +216,30 @@ fi
 
 set_cc_env $cc_env
 
+if [ $variant = "62" ]; then
+	config_target="defconfig ti_arm64_prune.config"
+	echo "Autoconfig CARBON : $config_target"
+fi
+
+# if config_target is not set
+# try to set it based on git branch name
+#
+if [ -z "$config_target" ]; then
+	check_boundary=`git branch --show-current | grep -c boundary`
+	if [ $check_boundary -eq 1 ]; then
+		config_target=boundary_defconfig
+		echo "Autoconfig : $config_target"
+	fi
+fi
+if [ -z "$config_target" ]; then
+	check_ezurio=`git branch --show-current | grep -c ezurio`
+	if [ $check_ezurio -eq 1 ]; then
+		config_target=ezurio_defconfig
+		echo "Autoconfig : $config_target"
+	fi
+fi
+#
+
 # make imx93_bd_smarc_defconfig
 #if [ $variant = "510" ]; then
 #	make defconfig
@@ -239,6 +269,10 @@ make modules_install
 check_result Linux-modules_install $?
 
 case $variant in
+	62)
+		DTBS="ti/k3-am625-sk.dtb ti/k3-am625-carbon.dtb"
+		SUBDIR="carbon62"
+	;;
 
 	6x)
 		DTBS="imx6*nitrogen*.dtb imx6q-ltch.dtb"
@@ -462,13 +496,14 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 		# Clean up the DTBOs
 		sudo rm ${TFTPROOT}/${SUBDIR}/devicetree/*
 
+		echo "\nCopying DTBOs from arch/arm64/boot/dts/mediatek/mt83x0-tungsten-smarc"
 		sudo cp arch/arm64/boot/dts/mediatek/mt83x0-tungsten-smarc/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
 
-#		sudo cp arch/arm64/boot/dts/mediatek/dtbo/* ${TFTPROOT}/${SUBDIR}/devicetree
-
 		if [ $variant = 510 ]; then
+			echo "\nCopying DTBOs from arch/arm64/boot/dts/mediatek/mt8370"
 			sudo cp arch/arm64/boot/dts/mediatek/mt8370/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
 		elif [ $variant = 700 ]; then
+			echo "\nCopying DTBOs from arch/arm64/boot/dts/mediatek/mt8390"
 			sudo cp arch/arm64/boot/dts/mediatek/mt8390/*.dtbo ${TFTPROOT}/${SUBDIR}/devicetree
 		fi
 	fi
