@@ -1,0 +1,26 @@
+/dts-v1/;
+
+/ {
+  description = "NetBoot FIT Image";
+  #address-cells = <1>;
+
+  images {
+      bootscript {
+        description = "Bootscript";
+        data = /incbin/("netboot.txt");
+        type = "script";
+        compression = "none";
+      };           
+};
+
+configurations {
+      default = "standard";
+      standard {
+            description = "Standard NetBoot script";
+            script = "bootscript";
+            hash {
+                    algo = "sha256";
+            };
+      };
+   };
+};     

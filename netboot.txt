@@ -1,19 +1,11 @@
 
 
 # mkimage -A arm64 -O linux -T script -C none -a 0 -e 0 -n "netbootscript" -d netboot.txt netboot.scr
+#
+# OR
+#
+# mkimage -f netboot.its netboot.fit
 
-#
-# setenv tftpserverip 192.168.16.10
-#
-# setenv tftpserverip 10.16.64.148
-#
-# tftp ${loadaddr} ${tftpserverip}:netboot.scr; source ${loadaddr}
-#
-# OR ...
-#
-# dhcp ${loadaddr} netboot.scr; source ${loadaddr} 
-#
-# OR ...
 #
 # setenv tftpserverip 10.16.64.148; dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
 #
@@ -21,8 +13,15 @@
 #
 # setenv tftpserverip 192.168.16.10; dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
 #
+# For FIT images
 #
-# setenv tftpserverip 10.16.64.148; dhcp ${scriptaddr} ${tftpserverip}:netboot.scr; setenv farshid 1; source ${scriptaddr}
+# setenv tftpserverip 192.168.16.10; dhcp ${scriptaddr} ${tftpserverip}:netboot.fit; source ${scriptaddr}:bootscript
+#
+# For TI EVK ... (scriptaddr was 0x80000000)
+#
+# setenv scriptaddr 0x81000000
+#
+# setenv tftpserverip 192.168.16.10; dhcp ${scriptaddr} ${tftpserverip}:netboot.fit; source ${scriptaddr}:bootscript
 #
 #
 # dhcp ${scriptaddr} netboot.scr; source ${scriptaddr}
@@ -46,7 +45,6 @@
 #
 # setenv serverip 10.16.64.148; dhcp ${scriptaddr} net_upgradeu.scr; source ${scriptaddr}
 #
-
 
 # Point to your server
 
@@ -126,6 +124,11 @@ elif itest.s "xabiomed" == "x${board}" ; then
 elif itest.s "xash" == "x${board}" ; then
 	detected_board=imx8mm_ash
 
+elif itest.s "xcarbon-am62" == "x${board}" ; then
+	detected_board=carbon_am62
+elif itest.s "xam62x" == "x${board}" ; then
+	detected_board=ti_am62x
+
 elif itest.s "xgeno" == "x${board}" ; then
 	detected_board=imx8mm_geno
 
@@ -168,6 +171,51 @@ fi
 #														#
 #################################################################################################################
 
+#########################################################################################
+#
+# ***************** Carbon AM62 ***********************************************
+#
+#########################################################################################
+
+if itest.s "xcarbon_am62" == "x${detected_board}"; then
+
+	setenv tftp_varient "carbon62${postvar}"
+	setenv nfs_varient "carbon62${postvar}"
+	test -n ${fdt_file} || setenv fdt_file k3-am625-carbon.dtb;
+	# setenv fdt_file k3-am625-sk.dtb
+
+	setenv bannertext "Carbon AM62"
+	run banner
+
+	# setenv bootargs 'console=ttyS2,115200n8'
+	setenv bootargs_nfs 'setenv bootargs ${bootargs} root=/dev/nfs rw ip=dhcp nfsroot=${tftpserverip}:${nfsroot},nfsvers=3,tcp'
+	setenv init_nfs 'run args_all bootargs_nfs'
+	setenv load_fdt_dhcp 'dhcp $fdtaddr $tftpserverip:${tftp_varient}/$fdt_file'
+	setenv boot_tftp 'tftp $loadaddr $tftpserverip:${tftp_varient}/Image && booti $loadaddr - $fdtaddr'
+	setenv bootcmd_net 'run init_nfs load_fdt_dhcp boot_tftp'
+
+#########################################################################################
+#
+# ***************** TI AM62X ***********************************************
+#
+# setenv tftpserverip 192.168.16.10; dhcp ${scriptaddr} ${tftpserverip}:netboot.fit; source ${scriptaddr}:bootscript
+#########################################################################################
+
+elif itest.s "xti_am62x" == "x${detected_board}"; then
+
+	setenv tftp_varient "carbon62${postvar}"
+	setenv nfs_varient "carbon62${postvar}"
+	test -n ${fdt_file} || setenv fdt_file k3-am625-sk.dtb;
+
+	setenv bannertext "TI AM62X"
+	run banner
+
+	# setenv bootargs 'console=ttyS2,115200n8'
+	setenv bootargs_nfs 'setenv bootargs ${bootargs} root=/dev/nfs rw ip=dhcp nfsroot=${tftpserverip}:${nfsroot},nfsvers=3,tcp'
+	setenv init_nfs 'run args_all bootargs_nfs'
+	setenv load_fdt_dhcp 'dhcp $fdtaddr $tftpserverip:${tftp_varient}/$fdt_file'
+	setenv boot_tftp 'tftp $loadaddr $tftpserverip:${tftp_varient}/Image && booti $loadaddr - $fdtaddr'
+	setenv bootcmd_net 'run init_nfs load_fdt_dhcp boot_tftp'
 
 #########################################################################################
 #
@@ -175,7 +223,7 @@ fi
 #
 #########################################################################################
 
-if itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_board}"; then
+elif itest.s "xt510" == "x${detected_board}" || itest.s "xt700" == "x${detected_board}"; then
 	if itest.s "xt510" == "x${detected_board}"; then
 		setenv tftp_varient "tungsten510${postvar}"
 		setenv nfs_varient "tungsten510${postvar}"
