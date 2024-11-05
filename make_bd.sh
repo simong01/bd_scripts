@@ -2,9 +2,9 @@
 
 variant=unknown
 
-variants="62 6x 93 510 700 8m"
+variants="62 6x 93 95 510 700 8m"
 
-vnames="Carbon_AM625 Nitrogen_6X Nitrogen_93 Tungsten_510 Tungsten_700 Nitrogen_8M_series"
+vnames="Carbon_AM625 Nitrogen_6X Nitrogen_93 Nitrogen_95 Tungsten_510 Tungsten_700 Nitrogen_8M_series"
 
 NPROC=$(($(nproc) - 4))
 
@@ -12,7 +12,10 @@ NFSROOT="/srv/nfs"
 TFTPROOT="/srv/tftp"
 
 # Only build the main kernel and dtbs and copy to tftp
-KERNEL_ONLY=1
+KERNEL_ONLY=0
+
+# Clean module directories on build and NFS
+CLEAN_MODULES=1
 
 #	make defconfig
 #	make boundary_defconfig
@@ -31,23 +34,7 @@ IMX_GPU_VIV=1
 IMX_VVCAM=0
 ##################################################################
 
-# Build IF573 out of tree module
-IF573=0
-IF573_BASE_PWD=/home/simong/Downloads/8MM_SMARC/if573/release
-# IF573 laird-backport-11.0.0.138
-IF573_VERSION=laird-backport-11.0.0.138
-#
 ##################################################################
-#
-# Laird drivers https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/backports/images/
-# 		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/backports/images/backports-laird-11.171.0.19.tar.bz2
-#
-#		https://github.com/rfpros/cp_release-backports-unreleased/archive/refs/tags/LRD-REL-11.171.0.24.tar.gz
-#
-# Laird fw	https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/lastSuccessfulBuild/artifact/buildroot/output/firmware/images/
-#		https://jenkins.devops.rfpros.com/job/CS-Linux/job/BSP-Pipeline/job/lrd-11.171.0.x/19/artifact/buildroot/output/firmware/images/laird-bdsdmac-firmware-11.171.0.19.tar.bz2
-#
-#		https://github.com/rfpros/cp_release-radio_firmware-unreleased/archive/refs/tags/LRD-REL-11.171.0.24.tar.gz
 #
 # SW
 # https://github.com/rfpros/cp_release-backports-unreleased
@@ -60,33 +47,44 @@ IF573_VERSION=laird-backport-11.0.0.138
 # LWB5 is	brcmfmac ??
 # IF573 is 	lwb
 # LWB5+(Summit) lwb ??
+# IF513 is 	lwb ??
+# TI351		sona_ti
+# NX611		sona_nx611
 #
-LAIRD_WIFI=0
+LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
 # LAIRD_WIFI_DEFCONFIG=sona_nx611
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
+# LAIRD_WIFI_DEFCONFIG=sona_ti
 LAIRD_WIFI_DEFCONFIG=lwb
 
-#LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
-#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
-
-#LAIRD_WIFI_BASE_PWD=/home/simong/Downloads/summit-backports-12.29.0.13
-#LAIRD_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
+#LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
+#LAIRD_WIFI_FW_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release
 LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
+
+#LAIRD_WIFI_BASE_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-backports-12.0.53.5
+#LAIRD_WIFI_FW_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-if513-sdio-firmware-12.0.53.5
+
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware
 # TODO Copy all relevant firmwares
-# LAIRD_WIFI_FW_PWD=/home/simong/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
+# LAIRD_WIFI_FW_PWD=~/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
 #
 ##########################################################################################################################################################################################
 #
 # NXP IW611 Wifi
 
 NXP_WIFI=0
-NXP_WIFI_BASE_PWD=/home/simong/githome/mwifiex/mxm_wifiex/wlan_src
-NXP_WIFI_FW_PWD=/home/simong/Downloads/nx611-eng-11.0.0.263-20240411/release
+NXP_WIFI_FW_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release
+NXP_WIFI_BASE_PWD=~/githome/mwifiex/mxm_wifiex/wlan_src
+# NXP_WIFI_BASE_PWD=${NXP_WIFI_FW_PWD}/laird-backport-11.0.0.263
 ##########################################################################################################################################################################################
 
 # QCACLD_BASE_PWD=/home/simong/githome/qcacld-2.0/backport
@@ -106,6 +104,10 @@ IWL_WIFI_FW_BASE_PWD=/home/simong/Downloads/
 ##########################################################################################################################################################################################
 
 check_result() {
+	if [ $# -ne 2 ]; then
+		echo "Oops not enough arguments [${#}] to check_result should be 2"
+		exit 127
+	fi
 	local NAME=$1
 	local RESULT=$2
 	
@@ -160,6 +162,8 @@ if [ ! -f $0 ]; then
 	return
 fi
 
+varient_name=unset
+
 if [ -n "$1" ]; then
 
 	if [ $1 = "-h" ]; then
@@ -177,11 +181,14 @@ if [ -n "$1" ]; then
 	variant=$1
 	found=0
 
-	for i in $variants; do
-		if [ $i = $variant ]; then
+	i=1
+	for item in $variants; do
+		if [ $item = $variant ]; then
+			varient_name=`echo ${vnames} | cut -d' ' -f${i}`
 			found=1
 			break
 		fi
+		i=$((i+1))
 	done
 	if [ $found -eq 0 ]; then
 		variant=unknown
@@ -195,7 +202,7 @@ if [ -n "$2" ]; then
 	KERNEL_ONLY=1
 fi
 
-echo "Variant is $variant"
+echo "Variant is $variant \"$varient_name\""
 
 if [ $variant = "unknown" ]; then
 	echo
@@ -206,7 +213,9 @@ if [ $variant = "unknown" ]; then
 	exit 127
 fi
 
-rm -rf out/*
+if [ $CLEAN_MODULES -eq 1 ]; then
+	rm -rf out/*
+fi
 
 cc_env=64
 
@@ -217,7 +226,8 @@ fi
 set_cc_env $cc_env
 
 if [ $variant = "62" ]; then
-	config_target="defconfig ti_arm64_prune.config"
+	config_target="defconfig ezurio_ti_arm64_prune.config"
+	# config_target="defconfig ti_arm64_prune.config"
 	echo "Autoconfig CARBON : $config_target"
 fi
 
@@ -239,6 +249,11 @@ if [ -z "$config_target" ]; then
 	fi
 fi
 #
+
+if [ $CLEAN_MODULES -eq 1 ]; then
+	echo -e "\nCLEANING Kernel modules output directory $INSTALL_MOD_PATH\n"
+	rm -rf ${INSTALL_MOD_PATH}/*
+fi
 
 # make imx93_bd_smarc_defconfig
 #if [ $variant = "510" ]; then
@@ -270,7 +285,7 @@ check_result Linux-modules_install $?
 
 case $variant in
 	62)
-		DTBS="ti/k3-am625-sk.dtb ti/k3-am625-carbon.dtb"
+		DTBS="ti/k3-am625-sk.dtb ti/k3-am625-sk-m2-cc3301.dtbo ti/k3-am625-carbon.dtb ti/k3-am625-carbon-*.dtbo"
 		SUBDIR="carbon62"
 	;;
 
@@ -287,6 +302,11 @@ case $variant in
 	93)
 		DTBS="freescale/imx93-nitrogen-smarc*.dtb"
 		SUBDIR="nitrogen93"
+	;;
+
+	95)
+		DTBS="freescale/imx95-nitrogen-smarc*.dtb"
+		SUBDIR="nitrogen95"
 	;;
 
 	510)
@@ -327,7 +347,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	#########################################################################
 
 	# Common iMX stuff
-	if [ $variant = 8m ]; then
+	if [ $variant = 8m ]||[ $variant = 95 ]; then
 		if [ $IMX_GPU_VIV -eq 1 ]; then
 			cd ../kernel-module-imx-gpu-viv
 			make -j16
@@ -352,31 +372,13 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 	fi
 
-	if [ $variant = 93 ]||[ $variant = 8m ]; then
-
-		if [ $IF573 -eq 1 ]; then
-			###############################################################
-			# IF573 laird
-
-			cd ${IF573_BASE_PWD}/${IF573_VERSION}
-			make defconfig-lwb
-
-			make -j $NPROC
-
-			check_result if573-driver $?
-
-			make modules_install -j2
-
-			cd $KERNEL_SRC
-
-			# Copy IF573 firmware
-			sudo cp -a ${IF573_BASE_PWD}/lib/* ${NFSROOT}/${SUBDIR}/lib/
-			###############################################################
-		fi
+	# iMX 93, 95, 8m  or Carbon 62
+	if [ $variant = 93 ]||[ $variant = 95 ]||[ $variant = 8m ]||[ $variant = "62" ]; then
 
 		if [ $LAIRD_WIFI -eq 1 ]; then
 			###############################################################
 			# Laird WiFi
+			echo -e "\nBuilding Laird WiFi defconfig-${LAIRD_WIFI_DEFCONFIG} ...\n"
 
 			cd ${LAIRD_WIFI_BASE_PWD}
 
@@ -388,7 +390,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 			make defconfig-${LAIRD_WIFI_DEFCONFIG}
 
-			check_result laird_wifi_defconfig
+			check_result laird_wifi_defconfig $?
 
 			make -j $NPROC
 
@@ -430,7 +432,9 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 			make build
 
-			sudo cp ../bin_wlan/*.ko ${NFSROOT}/${SUBDIR}/home/root/
+			#sudo cp ../bin_wlan/*.ko ${NFSROOT}/${SUBDIR}/lib/modules/${kernel_release}/kernel/drivers/net/wireless/
+			sudo cp ../bin_wlan/*.ko ${KERNEL_SRC}/out/lib/modules/${kernel_release}/kernel/drivers/net/wireless/
+			# sudo cp -r drivers/net/wireless/laird/mwifiex ${KERNEL_SRC}/out/lib/modules/${kernel_release}/kernel/
 
 			cd $KERNEL_SRC
 
@@ -508,7 +512,33 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 		fi
 	fi
 
+	# Common TI stuff
+	if [ $variant = "62" ]; then
+		cd ../ti-img-rogue-driver
+
+		TARGET_PRODUCT="am62_linux"
+		PVR_BUILD="release"
+		PVR_WS="lws-generic"
+
+		make -j16 BUILD=${PVR_BUILD} PVR_BUILD_DIR=${TARGET_PRODUCT} WINDOW_SYSTEM=${PVR_WS}
+
+		check_result ti-img-rogue-driver $?
+
+		export PVR_BUILD_DIR=nohw_linux
+
+		make -C ${KERNEL_SRC} M=binary_${TARGET_PRODUCT}_${PVR_WS}_${PVR_BUILD}/target_aarch64/kbuild modules_install
+
+		check_result ti-img-rogue-driver-install $?
+
+		cd $KERNEL_SRC
+	fi
+
 fi # end KERNEL_ONLY=0
+
+if [ $CLEAN_MODULES -eq 1 ]; then
+	echo -e "\nCLEANING Kernel modules NFS directory ${NFSROOT}/${SUBDIR}/lib/modules/\n"
+	sudo rm -rf ${NFSROOT}/${SUBDIR}/lib/modules/*
+fi
 
 sudo cp -av out/lib/modules/${kernel_release} ${NFSROOT}/${SUBDIR}/lib/modules/
 
@@ -535,9 +565,13 @@ sudo chown -R root:root ${NFSROOT}/${SUBDIR}/lib/modules/${kernel_release}
 
 echo "\nBuilt kernel $kernel_release\n"
 
-if [ $LAIRD_WIFI -eq 1 ]; then
-	echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
-	echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
+if [ $KERNEL_ONLY -eq 0 ]; then
+	if [ $LAIRD_WIFI -eq 1 ]; then
+		echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
+		echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
+	fi
+else
+	echo "\nKernel ONLY build!"
 fi
 
 echo "Done!"
