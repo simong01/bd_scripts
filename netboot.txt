@@ -84,7 +84,11 @@ setenv nfsroot ${nfs_base}/${nfs_varient};
 
 ## imx_cpu=8MP[8]
 if test -z "${imx_cpu}"; then
-        setexpr imx_cpu sub ".*(..?..?)$" "\\1" "${soc_type}"
+	if test -z "${soc_type}"; then
+		setexpr imx_cpu sub ".*(..?..?)$" "\\1" "${soc}"
+	else
+		setexpr imx_cpu sub ".*(..?..?)$" "\\1" "${soc_type}"
+	fi
 fi
 ##grab 1st 2/3 characters of string
 setexpr cpu2 sub "^(..?).*" "\\1" "${imx_cpu}"
@@ -151,6 +155,8 @@ elif itest.s "xnitrogen8mm_rev2" == "x${board}" ; then
 elif itest.s "xnitrogen-som" == "x${board}" ; then
 	if itest.s x8UL == "x${cpu3}" ; then
 		detected_board=imx8ulp_som
+	elif itest.s xulp == "x${imx_cpu}" ; then
+		detected_board=imx8ulp_som
 	else
 		echo "!!!! Error: Unknown nitrogen-som board. ${board} ${imx_cpu}"
 	fi
@@ -159,7 +165,8 @@ elif itest.s "xnitrogen8_lite" == "x${board}" ; then
 
 elif itest.s "xnitrogen8mp" == "x${board}" ; then
 	detected_board=imx8mp_som
-
+elif itest.s "xtrimble-por" == "x${board}" ; then
+	detected_board=imx8ulp_trimble_por
 elif itest.s "xmmr" == "x${board}" ; then
 	detected_board=imx8mp_mmr
 elif itest.s "xnitrogen8mp_vm" == "x${board}" ; then
@@ -167,7 +174,7 @@ elif itest.s "xnitrogen8mp_vm" == "x${board}" ; then
 elif itest.s "xnitrogen6_max" == "x${board}" ; then
 	detected_board=imx6q_max
 else
-	echo "!!!! Error: Unknown boundary u-boot. ${board}"
+	echo "!!!! Error: Unknown boundary u-boot. ${board} !!!"
 	exit;
 fi
 
@@ -402,6 +409,24 @@ elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
 
 #########################################################################################
 #
+# ***************** 8ULP TRIMBLE POR*****************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx8ulp_trimble_por" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen8m${postvar}"
+	setenv nfs_varient "nitrogen8m${postvar}"
+	test -n ${fdt_file} || setenv fdt_file imx8ulp-trimble-porpoise.dtb;
+	# setenv fdt_file imx8ulp-nitrogen-som-m33.dtb;
+	setenv bannertext "Trimble 8ULP POR"
+	run banner
+
+	if test ${post_fdt} = ""; then
+		setenv post_fdt 'run cmd_mipi'
+	fi
+
+#########################################################################################
+#
 # ***************** 8MP ABIOMED**********************************************************
 #
 #########################################################################################
@@ -551,7 +576,7 @@ elif itest.s "ximx95_smarc" == "x${detected_board}"; then
 
 	test -n ${fdt_file} || setenv fdt_file imx95-nitrogen-smarc.dtb
 
-	setenv bannertext "Nitrogen 95 SMARC default device tree"
+	setenv bannertext "Nitrogen 95 SMARC ${fdt_file}"
 
 	run banner
 
@@ -599,7 +624,9 @@ echo "nfsroot is ${nfsroot}"
 #        tftpserverip=${serverip}
 #fi
 # Common for all IMX boards
-if test -n "${imx_cpu}"; then
+if test -n "${imx_cpu}" && itest.s "xtek" != "x${imx_cpu}"; then
+
+	echo "Common for all IMX boards"
 
 	setenv kernelimage "Image"
 	setenv bootcommand "booti"
@@ -622,6 +649,8 @@ if test -n "${imx_cpu}"; then
 			if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file};
 			fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize;
 			then
+				for dtbofile in ${dtbos}; do dhcp ${fdtoverlay_addr_r} ${tftpserverip}:${tftp_varient}/${dtbofile}; fdt apply ${fdtoverlay_addr_r}; done;
+
 				if test -n "${post_fdt}";
 				then
 					run post_fdt;
