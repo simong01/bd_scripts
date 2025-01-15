@@ -165,7 +165,7 @@ elif itest.s "xnitrogen8_lite" == "x${board}" ; then
 
 elif itest.s "xnitrogen8mp" == "x${board}" ; then
 	detected_board=imx8mp_som
-elif itest.s "xtrimble-por" == "x${board}" ; then
+elif itest.s "xporpoise" == "x${board}" ; then
 	detected_board=imx8ulp_trimble_por
 elif itest.s "xmmr" == "x${board}" ; then
 	detected_board=imx8mp_mmr
@@ -416,7 +416,7 @@ elif itest.s "ximx8ulp_som" == "x${detected_board}"; then
 elif itest.s "ximx8ulp_trimble_por" == "x${detected_board}"; then
 	setenv tftp_varient "nitrogen8m${postvar}"
 	setenv nfs_varient "nitrogen8m${postvar}"
-	test -n ${fdt_file} || setenv fdt_file imx8ulp-trimble-porpoise.dtb;
+	test -n ${fdt_file} || setenv fdt_file imx8ulp-porpoise.dtb;
 	# setenv fdt_file imx8ulp-nitrogen-som-m33.dtb;
 	setenv bannertext "Trimble 8ULP POR"
 	run banner
