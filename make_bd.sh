@@ -28,7 +28,7 @@ CLEAN_MODULES=1
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=1
+IMX_GPU_VIV=0
 
 # isp-vvcam
 IMX_VVCAM=0
@@ -51,14 +51,17 @@ IMX_VVCAM=0
 # TI351		sona_ti
 # NX611		sona_nx611
 #
+# MORSE		morse
+#
 LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
-# LAIRD_WIFI_DEFCONFIG=sona_nx611
+# LAIRD_WIFI_DEFCONFIG=morse
+LAIRD_WIFI_DEFCONFIG=sona_nx611
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
 # LAIRD_WIFI_DEFCONFIG=sona_ti
-LAIRD_WIFI_DEFCONFIG=lwb
+# LAIRD_WIFI_DEFCONFIG=lwb
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
 #LAIRD_WIFI_FW_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release
@@ -67,9 +70,10 @@ LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
 #LAIRD_WIFI_BASE_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-backports-12.0.53.5
 #LAIRD_WIFI_FW_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-if513-sdio-firmware-12.0.53.5
 
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/morse
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware # OLD NAME !!
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
@@ -79,7 +83,14 @@ LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sd
 #
 ##########################################################################################################################################################################################
 #
-# NXP IW611 Wifi
+# Morse Wifi (HALO / 802.11ah)
+MORSE_WIFI=0
+MORSE_WIFI_BASE_PWD=~/Downloads/morse/morsemicro_driver_rel_1_12_4_2024_Jun_11
+MORSE_WIFI_FW_PWD=~/Downloads/morse/firmware_binaries_1_12_4
+#
+##########################################################################################################################################################################################
+#
+# OLD !!! NXP IW611 Wifi USE LAIRD_WIFI instead
 
 NXP_WIFI=0
 NXP_WIFI_FW_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release
@@ -142,7 +153,7 @@ set_cc_env() {
 
 	export KERNEL_SRC=$PWD
 
-	# For NXP IW611
+	# For NXP IW611 and TI Rogue
 	export KERNELDIR=$PWD
 
 	export KLIB=$KERNEL_SRC/out
@@ -213,10 +224,6 @@ if [ $variant = "unknown" ]; then
 	exit 127
 fi
 
-if [ $CLEAN_MODULES -eq 1 ]; then
-	rm -rf out/*
-fi
-
 cc_env=64
 
 if [ $variant = "6x" ]; then
@@ -248,11 +255,16 @@ if [ -z "$config_target" ]; then
 		echo "Autoconfig : $config_target"
 	fi
 fi
+if [ -z "$config_target" ]; then
+	echo "Cannot figure out correct target. Assuming ezurio_defconfig"
+	read -p "Press enter to continue" ans
+	config_target=ezurio_defconfig
+fi
 #
 
 if [ $CLEAN_MODULES -eq 1 ]; then
 	echo -e "\nCLEANING Kernel modules output directory $INSTALL_MOD_PATH\n"
-	rm -rf ${INSTALL_MOD_PATH}/*
+	sudo rm -rf ${INSTALL_MOD_PATH}/*
 fi
 
 # make imx93_bd_smarc_defconfig
@@ -263,16 +275,17 @@ fi
 #	make boundary_defconfig
 #	make imx_v8_defconfig
 #fi
+echo -e "\nConfiguring kernel $config_target ... "
 make $config_target
 
 check_result Linux-config $?
 
-# make clean
-
 if [ $cc_env = 32 ]; then
+	echo -e "\nBuilding 32 bit kernel -j $NPROC $TARGET ... "
 	make zImage modules dtbs -j $NPROC $TARGET
 else
 	# make -j 16
+	echo -e "\nBuilding 64 bit kernel -j $NPROC $TARGET ... "
 	make DTC_FLAGS="-@" -j $NPROC $TARGET
 fi
 
@@ -295,7 +308,8 @@ case $variant in
 	;;
 
 	8m)
-		DTBS="freescale/imx8*nitrogen*.dtb freescale/imx8mm-geno.dtb freescale/imx8mp-mmr.dtb freescale/imx8mp-abiomed.dtb freescale/imx8mm-ash.dtb"
+		DTBS="freescale/imx8*nitrogen*.dtb freescale/imx8mm-geno.dtb freescale/imx8mp-mmr.dtb"
+		DTBS="${DTBS} freescale/imx8mp-abiomed.dtb freescale/imx8mm-ash.dtb freescale/imx8ulp-porpoise.dtb"
 		SUBDIR="nitrogen8m"
 	;;
 
@@ -305,7 +319,7 @@ case $variant in
 	;;
 
 	95)
-		DTBS="freescale/imx95-nitrogen-smarc*.dtb"
+		DTBS="freescale/imx95-nitrogen-smarc*.dtb*"
 		SUBDIR="nitrogen95"
 	;;
 
@@ -333,7 +347,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 		cd ../backport-iwlwifi
 
 		make defconfig-iwlwifi-public
-		make -j16
+		make -j $NPROC
 
 		check_result iwlwifi $?
 
@@ -347,10 +361,13 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	#########################################################################
 
 	# Common iMX stuff
-	if [ $variant = 8m ]||[ $variant = 95 ]; then
+	if [ $variant = 8m ]; then
 		if [ $IMX_GPU_VIV -eq 1 ]; then
 			cd ../kernel-module-imx-gpu-viv
-			make -j16
+
+			export CONFIG_MXC_GPU_VIV=m
+
+			make -j $NPROC
 
 			check_result imx-gpu-viv $?
 
@@ -361,7 +378,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 		if [ $IMX_VVCAM -eq 1 ]; then
 			cd ../isp-vvcam/vvcam/v4l2
-			make -j16
+			make -j $NPROC
 
 			check_result imx-vvcam $?
 
@@ -458,6 +475,34 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 			###############################################################
 		fi
+
+		if [ $MORSE_WIFI -eq 1 ]; then
+			###############################################################
+			# MORSE Wifi
+
+			cd $MORSE_WIFI_BASE_PWD
+
+			make clean
+
+			check_result morse_wifi_driver_clean $?
+
+			make -j $NPROC MORSE_TRACE_PATH=`pwd` CONFIG_WLAN_VENDOR_MORSE=m \
+				CONFIG_MORSE_SDIO=y CONFIG_MORSE_USER_ACCESS=y \
+				CONFIG_MORSE_SDIO_ALIGNMENT=4 CONFIG_MORSE_VENDOR_COMMAND=y DEBUG=y
+
+			check_result morse_wifi_driver_compile $?
+
+			make modules_install
+
+			check_result morse_wifi_driver_install $?
+
+			cd $KERNEL_SRC
+
+			# Copy wifi-firmware
+			sudo mkdir ${NFSROOT}/${SUBDIR}/lib/firmware/morse
+			sudo cp -a ${MORSE_WIFI_FW_PWD}/* ${NFSROOT}/${SUBDIR}/lib/firmware/morse/
+
+		fi
 	fi
 	#
 
@@ -465,7 +510,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	if [ $variant = 510 ]||[ $variant = 700 ]; then
 
 		cd ../mtk-mali-gpu-driver
-		make -j16
+		make -j $NPROC
 
 		check_result mtk-mali-gpu-driver $?
 
@@ -473,7 +518,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 		cd ../mtk-vcodec-driver
 
-		TARGET_PLATFORM=mt8395 make -j16
+		TARGET_PLATFORM=mt8395 make -j $NPROC
 
 		check_result mtk-vcodec-driver $?
 
@@ -489,7 +534,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 		cd ../mtk-camisp-driver
 
-		PLATFORM=mt8188 make -j12
+		PLATFORM=mt8188 make -j $NPROC
 
 		check_result mtk-camisp-driver $?
 
@@ -514,23 +559,40 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 	# Common TI stuff
 	if [ $variant = "62" ]; then
+
+		echo
+		echo " #################################   ti-img-rogue-driver ##################################"
+		echo
+
+		# git clone https://git.ti.com/git/graphics/ti-img-rogue-driver.git -b linuxws/scarthgap/k6.6/24.1.6554834
+
 		cd ../ti-img-rogue-driver
 
 		TARGET_PRODUCT="am62_linux"
-		PVR_BUILD="release"
-		PVR_WS="lws-generic"
 
-		make -j16 BUILD=${PVR_BUILD} PVR_BUILD_DIR=${TARGET_PRODUCT} WINDOW_SYSTEM=${PVR_WS}
+		PVR_BUILD="release"
+		# PVR_WS="lws-generic"
+		PVR_WS="wayland"
+
+		export SYSROOT="${NFSROOT}/${SUBDIR}"
+		export DISCIMAGE=${KERNEL_SRC}/out
+
+		make -j $NPROC BUILD=${PVR_BUILD} PVR_BUILD_DIR=${TARGET_PRODUCT} WINDOW_SYSTEM=${PVR_WS} SYSROOT=${SYSROOT}
 
 		check_result ti-img-rogue-driver $?
 
-		export PVR_BUILD_DIR=nohw_linux
+		cd build/linux/${TARGET_PRODUCT}
 
-		make -C ${KERNEL_SRC} M=binary_${TARGET_PRODUCT}_${PVR_WS}_${PVR_BUILD}/target_aarch64/kbuild modules_install
+		sudo -E make install BUILD=${PVR_BUILD}
 
-		check_result ti-img-rogue-driver-install $?
+		check_result ti-img-rogue-driver-mod-install $?
 
 		cd $KERNEL_SRC
+
+		make modules_install
+
+		check_result ti-img-rogue-driver-linux-mod-install $?
+
 	fi
 
 fi # end KERNEL_ONLY=0
@@ -569,6 +631,10 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	if [ $LAIRD_WIFI -eq 1 ]; then
 		echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
 		echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
+	fi
+	if [ $MORSE_WIFI -eq 1 ]; then
+		echo "\nBuilt Morse Wifi (802.11ah) using driver source at $MORSE_WIFI_BASE_PWD"
+		echo "And Firmware from $MORSE_WIFI_FW_PWD"
 	fi
 else
 	echo "\nKernel ONLY build!"
