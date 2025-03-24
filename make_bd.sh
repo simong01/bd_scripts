@@ -28,12 +28,17 @@ CLEAN_MODULES=1
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=0
+IMX_GPU_VIV=1
+IMX_GPU_VIV_BASE_PWD=~/githome/kernel-module-imx-gpu-viv
 
 # isp-vvcam
-IMX_VVCAM=0
-##################################################################
+IMX_VVCAM=1
+IMX_VVCAM_BASE_PWD=~/githome/isp-vvcam/vvcam/v4l2
 
+##################################################################
+TAC5X1X=0
+TAC5X1X_BASE_PWD=~/githome/cp_linux-som-external/package-3rd-party/tac5x1x/files
+# TAC5X1X_BASE_PWD=~/githome/tac5x1x-linux-driver/src
 ##################################################################
 #
 # SW
@@ -50,6 +55,7 @@ IMX_VVCAM=0
 # IF513 is 	lwb ??
 # TI351		sona_ti
 # NX611		sona_nx611
+# ST60-SIPT	summit60
 #
 # MORSE		morse
 #
@@ -57,29 +63,54 @@ LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
 # LAIRD_WIFI_DEFCONFIG=morse
-LAIRD_WIFI_DEFCONFIG=sona_nx611
+# LAIRD_WIFI_DEFCONFIG=sona_nx611
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
 # LAIRD_WIFI_DEFCONFIG=sona_ti
-# LAIRD_WIFI_DEFCONFIG=lwb
+LAIRD_WIFI_DEFCONFIG=lwb
+# LAIRD_WIFI_DEFCONFIG=summit60
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
-#LAIRD_WIFI_FW_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release
+#LAIRD_WIFI_FW_PWD=~/Downloads/summit-backports-12.103.0.5
+
+# Un-released SW
 LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
+
+# Engineering release SW
+# LAIRD_WIFI_BASE_PWD=~/Downloads/ti351_eng-12.0.0.113-20241113/ti351-radio-stack-eng-12.0.0.113/release/summit-backports-12.0.0.113
+
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-backports-12.0.53.5
 #LAIRD_WIFI_FW_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-if513-sdio-firmware-12.0.53.5
 
+# Engineering release FW
+# LAIRD_WIFI_FW_PWD=~/Downloads/ti351_eng-12.0.0.113-20241113/ti351-radio-stack-eng-12.0.0.113/release/summit-ti351-WW-firmware-12.0.0.113
+
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/morse
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware # OLD NAME !!
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware # OLD NAME !!
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-sdio
+
+
 # TODO Copy all relevant firmwares
 # LAIRD_WIFI_FW_PWD=~/Downloads/laird-lwb5plus-sdio-sa-firmware-11.171.0.19
+#
+##########################################################################################################################################################################################
+#
+# NewRaCom Wifi (HALO / 802.11ah)
+NRC_WIFI=0
+NRC_WIFI_BASE_PWD=~/githome/nrc7394_sw_pkg/package/src/nrc
+NRC_WIFI_FW_PWD=~/githome/nrc7394_sw_pkg/package/evk/binary
+#		~/githome/nrc7394_sw_pkg/package/evk/sw_pkg/nrc_pkg/sw/firmware
+#
+##########################################################################################################################################################################################
 #
 ##########################################################################################################################################################################################
 #
@@ -121,8 +152,8 @@ check_result() {
 	fi
 	local NAME=$1
 	local RESULT=$2
-	
-	if [ $RESULT -ne 0 ]; then 
+
+	if [ $RESULT -ne 0 ]; then
 		echo "Oops ${NAME} compile problems.[$RESULT]"
 		cd $KERNEL_SRC
 		exit $RESULT
@@ -159,6 +190,12 @@ set_cc_env() {
 	export KLIB=$KERNEL_SRC/out
 
 	export KLIB_BUILD=$KERNEL_SRC
+
+	# Boris TI tac5x1x
+	export KERNEL_PATH=$KERNEL_SRC
+
+	# NRC7394
+	export KDIR=$KERNEL_SRC
 
 	echo "Cross Compile environment ${cc_env}bit set"
 }
@@ -314,7 +351,7 @@ case $variant in
 	;;
 
 	93)
-		DTBS="freescale/imx93-nitrogen-smarc*.dtb"
+		DTBS="freescale/imx93-bdx.dtb freescale/imx93-nitrogen-smarc*.dtb freescale/imx93-nvc.dtb"
 		SUBDIR="nitrogen93"
 	;;
 
@@ -363,7 +400,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	# Common iMX stuff
 	if [ $variant = 8m ]; then
 		if [ $IMX_GPU_VIV -eq 1 ]; then
-			cd ../kernel-module-imx-gpu-viv
+			cd $IMX_GPU_VIV_BASE_PWD
 
 			export CONFIG_MXC_GPU_VIV=m
 
@@ -377,7 +414,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 		fi
 
 		if [ $IMX_VVCAM -eq 1 ]; then
-			cd ../isp-vvcam/vvcam/v4l2
+			cd $IMX_VVCAM_BASE_PWD
 			make -j $NPROC
 
 			check_result imx-vvcam $?
@@ -391,7 +428,28 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 	# iMX 93, 95, 8m  or Carbon 62
 	if [ $variant = 93 ]||[ $variant = 95 ]||[ $variant = 8m ]||[ $variant = "62" ]; then
+		if [ $TAC5X1X -eq 1 ]; then
+			###############################################################
+			# TAC5X1X
+			echo -e "\nBuilding TAC5X1X ...\n"
 
+			cd ${TAC5X1X_BASE_PWD}
+
+			TAC5X1X_GIT_VER=`git symbolic-ref -q --short HEAD`
+
+			make clean
+
+			make
+
+			check_result tac5x1x $?
+
+			make modules_install
+
+			check_result "tac5x1x install" $?
+
+			cd $KERNEL_SRC
+
+		fi
 		if [ $LAIRD_WIFI -eq 1 ]; then
 			###############################################################
 			# Laird WiFi
@@ -400,6 +458,11 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 			cd ${LAIRD_WIFI_BASE_PWD}
 
 			LAIRD_WIFI_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+			result=$?
+			if [ $result -eq 128 ]; then
+				echo "NOT a GIT repo"
+				LAIRD_WIFI_GIT_VER="from ${LAIRD_WIFI_BASE_PWD}"
+			fi
 
 			make mrproper
 
@@ -474,6 +537,32 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 			cd $KERNEL_SRC
 
 			###############################################################
+		fi
+
+		if [ $NRC_WIFI -eq 1 ]; then
+			###############################################################
+			# NRC Wifi
+
+			cd $NRC_WIFI_BASE_PWD
+
+			make clean
+
+			check_result nrc_wifi_driver_clean $?
+
+			make -j $NPROC
+
+			check_result nrc_wifi_driver_compile $?
+
+			make modules_install
+
+			check_result nrc_wifi_driver_install $?
+
+			cd $KERNEL_SRC
+
+			# Copy wifi-firmware
+			#sudo mkdir ${NFSROOT}/${SUBDIR}/lib/firmware/morse
+			#sudo cp -a ${MORSE_WIFI_FW_PWD}/* ${NFSROOT}/${SUBDIR}/lib/firmware/morse/
+
 		fi
 
 		if [ $MORSE_WIFI -eq 1 ]; then
@@ -628,6 +717,9 @@ sudo chown -R root:root ${NFSROOT}/${SUBDIR}/lib/modules/${kernel_release}
 echo "\nBuilt kernel $kernel_release\n"
 
 if [ $KERNEL_ONLY -eq 0 ]; then
+	if [ $TAC5X1X -eq 1 ]; then
+		echo "\nBuilt tac5x1x $TAC5X1X_GIT_VER"
+	fi
 	if [ $LAIRD_WIFI -eq 1 ]; then
 		echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
 		echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
