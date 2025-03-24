@@ -8,6 +8,7 @@ temperature_file="/sys/class/thermal/thermal_zone0/temp"
 
 glmark2_prg="/usr/bin/glmark2-es2-wayland"
 multicrunch_prg="./multicrunch"
+NPROC=`nproc`
 
 logfile=`mktemp`
 csvfile="${logfile}.csv"
@@ -27,7 +28,7 @@ fi
 
 $glmark2_prg --fullscreen > /dev/null &
 gmark_pid=$!
-$multicrunch_prg  > /dev/null &
+$multicrunch_prg --crunch $NPROC > /dev/null &
 multicrunch_pid=$!
 
 
