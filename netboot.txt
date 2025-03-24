@@ -111,7 +111,7 @@ elif itest.s "xmt8390-tungsten_smarc" == "x${board}" ; then
 	echo "!!!! Error: OLD T700 U-boot please update"
 	#exit;
 	detected_board=t700
-	
+
 elif itest.s "xnitrogen_smarc" == "x${board}" || itest.s "ximx93_smarc" == "x${board}" || itest.s "xnitrogen-smarc" == "x${board}"; then
 	if itest.s x8MP == "x${cpu3}" ; then
 		detected_board=imx8mp_smarc
@@ -167,12 +167,19 @@ elif itest.s "xnitrogen8mp" == "x${board}" ; then
 	detected_board=imx8mp_som
 elif itest.s "xporpoise" == "x${board}" ; then
 	detected_board=imx8ulp_trimble_por
+elif itest.s "xtrimble-por" == "x${board}" ; then
+	# Old name
+	detected_board=imx8ulp_trimble_por
 elif itest.s "xmmr" == "x${board}" ; then
 	detected_board=imx8mp_mmr
 elif itest.s "xnitrogen8mp_vm" == "x${board}" ; then
 	detected_board=imx8mp_vm
 elif itest.s "xnitrogen6_max" == "x${board}" ; then
 	detected_board=imx6q_max
+elif itest.s "xbdx" == "x${board}" ; then
+	detected_board=imx93_bdx
+elif itest.s "xnvc" == "x${board}" ; then
+	detected_board=imx93_nvc
 else
 	echo "!!!! Error: Unknown boundary u-boot. ${board} !!!"
 	exit;
@@ -528,6 +535,37 @@ elif itest.s "ximx8mp_som" == "x${detected_board}"; then
 		setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
 	fi
 
+#########################################################################################
+#
+# ***************** 93 BDX   ************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx93_bdx" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen93${postvar}"
+	setenv nfs_varient "nitrogen93${postvar}"
+
+	setenv bannertext "BDX 93"
+
+	test -n ${fdt_file} || setenv fdt_file imx93-bdx.dtb
+
+	run banner
+
+#########################################################################################
+#
+# ***************** 93 NVC   ************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx93_nvc" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen93${postvar}"
+	setenv nfs_varient "nitrogen93${postvar}"
+
+	setenv bannertext "NVC 93"
+
+	test -n ${fdt_file} || setenv fdt_file imx93-nvc.dtb
+
+	run banner
 
 #########################################################################################
 #
@@ -550,7 +588,8 @@ elif itest.s "ximx93_smarc" == "x${detected_board}"; then
 	fi
 	i2c probe 0x38
 	if test $? = "0"; then
-		setenv touch_addr "0x38"
+		setenv touch_addr "0x38 (NOT SUPPORTED)"
+		# setenv post_fdt 'fdt set /soc@0/bus@44000000/i2c@44340000/touchscreen@5d status disabled; fdt set /soc@0/bus@44000000/i2c@44340000/touchscreen@38 status okay;'
 	fi
 	if itest.s "x" == "x${touch_addr}"; then
 		test -n ${fdt_file} || setenv fdt_file imx93-nitrogen-smarc.dtb
@@ -647,7 +686,8 @@ if test -n "${imx_cpu}" && itest.s "xtek" != "x${imx_cpu}"; then
 		if test ${boot_fdt} = yes || test ${boot_fdt} = try;
 		then
 			if dhcp ${fdt_addr} ${tftpserverip}:${tftp_varient}/${fdt_file};
-			fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize;
+			# fdt addr ${fdt_addr}; setenv fdt_high 0xffffffff; fdt resize;
+			fdt addr ${fdt_addr}; fdt resize 0x10000;
 			then
 				for dtbofile in ${dtbos}; do dhcp ${fdtoverlay_addr_r} ${tftpserverip}:${tftp_varient}/${dtbofile}; fdt apply ${fdtoverlay_addr_r}; done;
 
