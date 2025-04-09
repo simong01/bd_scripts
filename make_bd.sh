@@ -28,11 +28,11 @@ CLEAN_MODULES=1
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=1
+IMX_GPU_VIV=0
 IMX_GPU_VIV_BASE_PWD=~/githome/kernel-module-imx-gpu-viv
 
 # isp-vvcam
-IMX_VVCAM=1
+IMX_VVCAM=0
 IMX_VVCAM_BASE_PWD=~/githome/isp-vvcam/vvcam/v4l2
 
 ##################################################################
@@ -57,9 +57,9 @@ TAC5X1X_BASE_PWD=~/githome/cp_linux-som-external/package-3rd-party/tac5x1x/files
 # NX611		sona_nx611
 # ST60-SIPT	summit60
 #
-# MORSE		morse
+# NRC + NX611	nrc7292_sona_nx611
 #
-LAIRD_WIFI=1
+LAIRD_WIFI=0
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
 # LAIRD_WIFI_DEFCONFIG=morse
@@ -67,8 +67,9 @@ LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
 # LAIRD_WIFI_DEFCONFIG=sona_ti
-LAIRD_WIFI_DEFCONFIG=lwb
-# LAIRD_WIFI_DEFCONFIG=summit60
+# LAIRD_WIFI_DEFCONFIG=lwb
+LAIRD_WIFI_DEFCONFIG=summit60
+# LAIRD_WIFI_DEFCONFIG=nrc7292_sona_nx611
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
 #LAIRD_WIFI_FW_PWD=~/Downloads/summit-backports-12.103.0.5
@@ -89,13 +90,13 @@ LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/morse
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware # OLD NAME !!
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware # OLD NAME !!
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-sdio
 
 
@@ -104,17 +105,20 @@ LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sd
 #
 ##########################################################################################################################################################################################
 #
-# NewRaCom Wifi (HALO / 802.11ah)
-NRC_WIFI=0
+# NewRaCom Wifi (HALO / 802.11ah) (SPI)
+NRC_WIFI=1
+NRC_BUILD_ORIGINAL=0 # 0 = DO NOT BUILD here; 1 = DO build here
 NRC_WIFI_BASE_PWD=~/githome/nrc7394_sw_pkg/package/src/nrc
-NRC_WIFI_FW_PWD=~/githome/nrc7394_sw_pkg/package/evk/binary
-#		~/githome/nrc7394_sw_pkg/package/evk/sw_pkg/nrc_pkg/sw/firmware
+# NRC_WIFI_FW_PWD=~/githome/nrc7394_sw_pkg/package/evk/binary
+NRC_WIFI_FW_PWD=~/githome/nrc7394_sw_pkg/package/evk/sw_pkg/nrc_pkg/sw/firmware
+NRC_WIFI_SCR_PWD=~/githome/nrc7394_sw_pkg/package/evk/sw_pkg/nrc_pkg
+NRC_WIFI_CLI_APP=1
 #
 ##########################################################################################################################################################################################
 #
 ##########################################################################################################################################################################################
 #
-# Morse Wifi (HALO / 802.11ah)
+# Morse Wifi (HALO / 802.11ah) (SDIO)
 MORSE_WIFI=0
 MORSE_WIFI_BASE_PWD=~/Downloads/morse/morsemicro_driver_rel_1_12_4_2024_Jun_11
 MORSE_WIFI_FW_PWD=~/Downloads/morse/firmware_binaries_1_12_4
@@ -543,25 +547,74 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 			###############################################################
 			# NRC Wifi
 
-			cd $NRC_WIFI_BASE_PWD
+			if [ $NRC_BUILD_ORIGINAL -eq 1 ]; then
 
-			make clean
+				cd $NRC_WIFI_BASE_PWD
 
-			check_result nrc_wifi_driver_clean $?
+				make clean
 
-			make -j $NPROC
+				check_result nrc_wifi_driver_clean $?
 
-			check_result nrc_wifi_driver_compile $?
+				# Build against Summit WiFi drivers ??
+				# if [ $LAIRD_WIFI -eq 1 ]; then
 
-			make modules_install
+				# 	export NOSTDINC_FLAGS="-I${LAIRD_WIFI_BASE_PWD}/backport-include -I ${LAIRD_WIFI_BASE_PWD}/include -include backport/backport.h"
+				# fi
+				#
 
-			check_result nrc_wifi_driver_install $?
+				make -j $NPROC
 
-			cd $KERNEL_SRC
+				check_result nrc_wifi_driver_compile $?
+
+				make modules_install
+
+				check_result nrc_wifi_driver_install $?
+
+				# Clean-up src build
+				make clean
+
+				cd $KERNEL_SRC
+
+			fi
 
 			# Copy wifi-firmware
-			#sudo mkdir ${NFSROOT}/${SUBDIR}/lib/firmware/morse
-			#sudo cp -a ${MORSE_WIFI_FW_PWD}/* ${NFSROOT}/${SUBDIR}/lib/firmware/morse/
+			sudo cp -va ${NRC_WIFI_FW_PWD}/nrc* ${NFSROOT}/${SUBDIR}/lib/firmware/
+
+			# Copy scripts etc.
+			# sudo cp -a ${NRC_WIFI_SCR_PWD} ${NFSROOT}/${SUBDIR}/root/
+
+			# More hacks
+
+			if [ $NRC_BUILD_ORIGINAL -eq 1 ]; then
+				sudo cp -va ${KERNEL_SRC}/out/lib/modules/${kernel_release}/updates/nrc.ko ${NFSROOT}/${SUBDIR}/root/nrc_pkg/sw/driver/
+			else
+				sudo cp -va ${KERNEL_SRC}/out/lib/modules/${kernel_release}/updates/drivers/net/wireless/nrc/nrc7292/nrc.ko ${NFSROOT}/${SUBDIR}/root/nrc_pkg/sw/driver/
+			fi
+
+			cd ${NFSROOT}/${SUBDIR}/lib/firmware/
+
+			# Use the normal binary file, instead of the eeprom one (nrc7394_cspi_eeprom.bin)
+			sudo rm uni_s1g.bin
+			sudo ln -s nrc7394_cspi.bin uni_s1g.bin
+			# Using a uni_s1g.bin from the EVK HW board
+			cd -
+
+			if [ $NRC_WIFI_CLI_APP -eq 1 ]; then
+				cd ${NRC_WIFI_BASE_PWD}/../cli_app
+				export CC=${CROSS_COMPILE}gcc
+				export AR=${CROSS_COMPILE}ar
+
+				make
+
+				check_result nrc_wifi_cli_app_compile $?
+
+				sudo cp -va cli_app ${NFSROOT}/${SUBDIR}/root/nrc_pkg/script/
+
+				make clean
+
+			fi
+
+			cd $KERNEL_SRC
 
 		fi
 
@@ -714,7 +767,7 @@ echo
 sudo chown -R root:root ${NFSROOT}/${SUBDIR}/lib/modules/${kernel_release}
 
 
-echo "\nBuilt kernel $kernel_release\n"
+echo "\nBuilt kernel $kernel_release using config : $config_target\n"
 
 if [ $KERNEL_ONLY -eq 0 ]; then
 	if [ $TAC5X1X -eq 1 ]; then
