@@ -2,9 +2,9 @@
 
 variant=unknown
 
-variants="62 6x 93 95 510 700 8m"
+variants="62 6x 91 93 95 510 700 8m"
 
-vnames="Carbon_AM625 Nitrogen_6X Nitrogen_93 Nitrogen_95 Tungsten_510 Tungsten_700 Nitrogen_8M_series"
+vnames="Carbon_AM625 Nitrogen_6X Nitrogen_91 Nitrogen_93 Nitrogen_95 Tungsten_510 Tungsten_700 Nitrogen_8M_series"
 
 NPROC=$(($(nproc) - 4))
 
@@ -28,11 +28,11 @@ CLEAN_MODULES=1
 # Currently only for 8m variants
 
 # imx-gpu-viv
-IMX_GPU_VIV=0
+IMX_GPU_VIV=1
 IMX_GPU_VIV_BASE_PWD=~/githome/kernel-module-imx-gpu-viv
 
 # isp-vvcam
-IMX_VVCAM=0
+IMX_VVCAM=1
 IMX_VVCAM_BASE_PWD=~/githome/isp-vvcam/vvcam/v4l2
 
 ##################################################################
@@ -59,16 +59,16 @@ TAC5X1X_BASE_PWD=~/githome/cp_linux-som-external/package-3rd-party/tac5x1x/files
 #
 # NRC + NX611	nrc7292_sona_nx611
 #
-LAIRD_WIFI=0
+LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=regression-test
 # bdimx8 in next release
 # LAIRD_WIFI_DEFCONFIG=morse
 # LAIRD_WIFI_DEFCONFIG=sona_nx611
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
-# LAIRD_WIFI_DEFCONFIG=sona_ti
+LAIRD_WIFI_DEFCONFIG=sona_ti
 # LAIRD_WIFI_DEFCONFIG=lwb
-LAIRD_WIFI_DEFCONFIG=summit60
+# LAIRD_WIFI_DEFCONFIG=summit60
 # LAIRD_WIFI_DEFCONFIG=nrc7292_sona_nx611
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
@@ -76,6 +76,18 @@ LAIRD_WIFI_DEFCONFIG=summit60
 
 # Un-released SW
 LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
+
+# Released SW URL (TAR FILES)
+# https://github.com/Ezurio/summit_backports_release
+
+# Released public GIT SRC then checkout tag eg. LRD-REL-12.103.0.5
+# https://github.com/Ezurio/summit_backports_release.git
+
+# Released FW URL (TAR FILES)
+# https://github.com/Ezurio/radio_firmware_release
+
+# Released public GIT FW then checkout tag eg. LRD-REL-12.103.0.5
+# https://github.com/Ezurio/radio_firmware_release.git
 
 # Engineering release SW
 # LAIRD_WIFI_BASE_PWD=~/Downloads/ti351_eng-12.0.0.113-20241113/ti351-radio-stack-eng-12.0.0.113/release/summit-backports-12.0.0.113
@@ -91,12 +103,13 @@ LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware # OLD NAME !!
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
+LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware # OLD NAME !!
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-firmware
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware # OLD NAME !!
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
+# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
 # LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-sdio
 
 
@@ -106,7 +119,7 @@ LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio
 ##########################################################################################################################################################################################
 #
 # NewRaCom Wifi (HALO / 802.11ah) (SPI)
-NRC_WIFI=1
+NRC_WIFI=0
 NRC_BUILD_ORIGINAL=0 # 0 = DO NOT BUILD here; 1 = DO build here
 NRC_WIFI_BASE_PWD=~/githome/nrc7394_sw_pkg/package/src/nrc
 # NRC_WIFI_FW_PWD=~/githome/nrc7394_sw_pkg/package/evk/binary
@@ -172,7 +185,7 @@ set_cc_env() {
 	export KERNEL_SRC=$PWD
 
 	# Ubuntu is export INSTALL_MOD_PATH=$PWD/ubuntunize64/linux-staging
-	export INSTALL_MOD_PATH=$PWD/out
+	export INSTALL_MOD_PATH=$KERNEL_SRC/out
 
 	if [ $cc_env = 64 ]; then
 		export ARCH=arm64
@@ -207,7 +220,7 @@ set_cc_env() {
 if [ ! -f $0 ]; then
 	# "you sourced me"
 	cc_env=64
-	if [ -n "$1" ]&&[ $1 = 32 ]; then
+	if [ -n "$1" ]&&[ $1 == 32 ]; then
 		cc_env=32
 	fi
 	set_cc_env $cc_env
@@ -344,7 +357,7 @@ case $variant in
 	;;
 
 	6x)
-		DTBS="imx6*nitrogen*.dtb imx6q-ltch.dtb"
+		DTBS="imx6*nitrogen*.dtb imx6q-ltch.dtb imx6ull-jde.dtb"
 		SUBDIR="nitrogen6x"
 	;;
 
@@ -352,6 +365,11 @@ case $variant in
 		DTBS="freescale/imx8*nitrogen*.dtb freescale/imx8mm-geno.dtb freescale/imx8mp-mmr.dtb"
 		DTBS="${DTBS} freescale/imx8mp-abiomed.dtb freescale/imx8mm-ash.dtb freescale/imx8ulp-porpoise.dtb"
 		SUBDIR="nitrogen8m"
+	;;
+
+	91)
+		DTBS="freescale/imx91-nitrogen-smarc*.dtb"
+		SUBDIR="nitrogen93"
 	;;
 
 	93)
@@ -430,8 +448,8 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 	fi
 
-	# iMX 93, 95, 8m  or Carbon 62
-	if [ $variant = 93 ]||[ $variant = 95 ]||[ $variant = 8m ]||[ $variant = "62" ]; then
+	# iMX 91, 93, 95, 8m  or Carbon 62
+	if [ $variant = 91 ]||[ $variant = 93 ]||[ $variant = 95 ]||[ $variant = 8m ]||[ $variant = "62" ]; then
 		if [ $TAC5X1X -eq 1 ]; then
 			###############################################################
 			# TAC5X1X
