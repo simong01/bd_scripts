@@ -119,6 +119,9 @@ elif itest.s "xnitrogen_smarc" == "x${board}" || itest.s "ximx93_smarc" == "x${b
 	elif itest.s x8MM == "x${cpu3}" ; then
                 detected_board=imx8mm_smarc
 
+	elif itest.s xx91 == "x${cpu3}"; then
+		detected_board=imx91_smarc
+
 	elif itest.s x93 == "x${cpu3}"  || itest.s xx93 == "x${cpu3}" ; then
 		detected_board=imx93_smarc
 
@@ -499,7 +502,7 @@ elif itest.s "ximx8mp_smarc" == "x${detected_board}"; then
 
 	if test ${post_fdt} = ""; then
 		# setenv post_fdt 'run cmd_mipi cmd_lvds2 cmd_hdmi'
-		setenv post_fdt 'run cmd_lvds cmd_hdmi'
+		setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
 	fi
 
 #########################################################################################
@@ -534,6 +537,22 @@ elif itest.s "ximx8mp_som" == "x${detected_board}"; then
 	if test ${post_fdt} = ""; then
 		setenv post_fdt 'run cmd_mipi cmd_lvds cmd_hdmi'
 	fi
+
+#########################################################################################
+#
+# ***************** 91 SMARC   ************************************************************
+#
+#########################################################################################
+
+elif itest.s "ximx91_smarc" == "x${detected_board}"; then
+	setenv tftp_varient "nitrogen93${postvar}"
+	setenv nfs_varient "nitrogen93${postvar}"
+
+	setenv bannertext "SMARC 91"
+
+	test -n ${fdt_file} || setenv fdt_file imx91-nitrogen-smarc.dtb
+
+	run banner
 
 #########################################################################################
 #
