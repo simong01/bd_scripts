@@ -66,10 +66,11 @@ LAIRD_WIFI=1
 # LAIRD_WIFI_DEFCONFIG=sona_nx611
 # LAIRD_WIFI_DEFCONFIG=bdimx6
 # LAIRD_WIFI_DEFCONFIG=bdimx8
-LAIRD_WIFI_DEFCONFIG=sona_ti
+# LAIRD_WIFI_DEFCONFIG=sona_ti
 # LAIRD_WIFI_DEFCONFIG=lwb
 # LAIRD_WIFI_DEFCONFIG=summit60
 # LAIRD_WIFI_DEFCONFIG=nrc7292_sona_nx611
+LAIRD_WIFI_DEFCONFIG=regression-test
 
 #LAIRD_WIFI_BASE_PWD=~/Downloads/nx611-eng-11.0.0.263-20240411/release/laird-backport-11.0.0.263
 #LAIRD_WIFI_FW_PWD=~/Downloads/summit-backports-12.103.0.5
@@ -97,20 +98,27 @@ LAIRD_WIFI_BASE_PWD=~/githome/cp_release-backports-unreleased/backport
 #LAIRD_WIFI_FW_PWD=~/Downloads/if513-radio-stack-eng-12.0.53.5/release/summit-if513-sdio-firmware-12.0.53.5
 
 # Engineering release FW
+LAIRD_WIFI_FW_BASE_PWD=~/githome/cp_release-radio_firmware-unreleased
+
+# If below is set then it is multiple FW directories
+LAIRD_WIFI_FW_LIST="summit-nx61x-firmware summit-if573-sdio-firmware summit-ti351-US-firmware"
+
+# Else set below to point to one directory
+
 # LAIRD_WIFI_FW_PWD=~/Downloads/ti351_eng-12.0.0.113-20241113/ti351-radio-stack-eng-12.0.0.113/release/summit-ti351-WW-firmware-12.0.0.113
 
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/morse
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/sona-nx61x-firmware # OLD NAME !!
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-nx61x-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if573-sdio-firmware
-LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-ti351-US-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-if513-sdio-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-m2-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-lwb5plus-sdio-sa-firmware # OLD NAME !!
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-lwb5plus-sdio-sa-firmware
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/laird-if573-sdio-firmware # OLD NAME !!
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-uart
-# LAIRD_WIFI_FW_PWD=~/githome/cp_release-radio_firmware-unreleased/summit-60-radio-firmware-sdio-sdio
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/morse
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/sona-nx61x-firmware # OLD NAME !!
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-nx61x-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-if573-sdio-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-ti351-US-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-if513-sdio-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-lwb5plus-sdio-sa-m2-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/laird-lwb5plus-sdio-sa-firmware # OLD NAME !!
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-lwb5plus-sdio-sa-firmware
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/laird-if573-sdio-firmware # OLD NAME !!
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-60-radio-firmware-sdio-uart
+# LAIRD_WIFI_FW_PWD=${LAIRD_WIFI_FW_BASE_PWD}/summit-60-radio-firmware-sdio-sdio
 
 
 # TODO Copy all relevant firmwares
@@ -448,7 +456,7 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 	fi
 
-	# iMX 91, 93, 95, 8m  or Carbon 62
+	# iMX 91, 93, 95, 8m or Carbon 62
 	if [ $variant = 91 ]||[ $variant = 93 ]||[ $variant = 95 ]||[ $variant = 8m ]||[ $variant = "62" ]; then
 		if [ $TAC5X1X -eq 1 ]; then
 			###############################################################
@@ -502,14 +510,26 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 
 			cd $KERNEL_SRC
 
-			# Copy laird-firmware
-			cd ${LAIRD_WIFI_FW_PWD}
+			if [ -n "$LAIRD_WIFI_FW_LIST" ]; then
+				for item in $LAIRD_WIFI_FW_LIST; do
+					LAIRD_WIFI_FW_PWD="${LAIRD_WIFI_FW_BASE_PWD}/${item}"
+					cd ${LAIRD_WIFI_FW_PWD}
+					check_result laird_wifi_firmware $?
+					sudo cp -a lib/* ${NFSROOT}/${SUBDIR}/lib/
+				done
+				LAIRD_WIFI_FW_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+			else
 
-			check_result laird_wifi_firmware $?
+				# Copy laird-firmware
+				cd ${LAIRD_WIFI_FW_PWD}
 
-			LAIRD_WIFI_FW_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+				check_result laird_wifi_firmware $?
 
-			sudo cp -a lib/* ${NFSROOT}/${SUBDIR}/lib/
+				LAIRD_WIFI_FW_GIT_VER=`git symbolic-ref -q --short HEAD || git describe --tags --exact-match`
+
+				sudo cp -a lib/* ${NFSROOT}/${SUBDIR}/lib/
+
+			fi
 
 			cd $KERNEL_SRC
 
@@ -793,7 +813,13 @@ if [ $KERNEL_ONLY -eq 0 ]; then
 	fi
 	if [ $LAIRD_WIFI -eq 1 ]; then
 		echo "\nBuilt Laird Wifi $LAIRD_WIFI_GIT_VER defconfig-${LAIRD_WIFI_DEFCONFIG}"
-		echo "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from ${LAIRD_WIFI_FW_PWD}\n"
+
+		echo -n "Using Laird FW   $LAIRD_WIFI_FW_GIT_VER from"
+		if [ -n "$LAIRD_WIFI_FW_LIST" ]; then
+			echo " ${LAIRD_WIFI_FW_BASE_PWD}/[${LAIRD_WIFI_FW_LIST}]\n"
+		else
+			echo " ${LAIRD_WIFI_FW_PWD}\n"
+		fi
 	fi
 	if [ $MORSE_WIFI -eq 1 ]; then
 		echo "\nBuilt Morse Wifi (802.11ah) using driver source at $MORSE_WIFI_BASE_PWD"
